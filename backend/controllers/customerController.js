@@ -21,16 +21,11 @@ exports.createCustomer = async (req, res) => {
       req.user.role === 'subadmin' &&
       !req.user.companyId
     ) {
-      // Subadmin must have a companyId
       return res
         .status(403)
         .json({ message: 'User not associated with a company.' });
     }
 
-    // const company = await Company.findOne(); // This line might need to be re-evaluated or use companyToUpdate
-    // if (!company) { // This check is now covered by the one for companyToUpdate if it's the same company
-    //   return res.status(404).json({ message: 'Company details not found' });
-    // }
     const { name, address, phone } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ message: 'Name and phone are required.' });
@@ -52,23 +47,21 @@ exports.createCustomer = async (req, res) => {
     });
     await customer.save();
 
-    company.totalcustomers += 1; // If this refers to the subadmin's company, use companyToUpdate
-    await company.save(); // If this refers to the subadmin's company, use companyToUpdate
-
-    // If you intend to update the specific company of the subadmin:
     if (companyToUpdate) {
       companyToUpdate.totalcustomers += 1;
       await companyToUpdate.save();
     } else {
-      // Fallback or error if companyToUpdate is unexpectedly null for a subadmin - though covered by checks
-      // Or, if a global company is intended, the original logic for `Company.findOne()` might be kept,
-      // but the status check for the subadmin's company still applies.
-      // For now, assuming totalcustomers update is for the subadmin's active company.
-      const globalCompany = await Company.findOne(); // Original logic, if needed for other purposes
-      if (globalCompany && !companyToUpdate) {
-        // Example: if superadmin creates customer under a global company
-        globalCompany.totalcustomers += 1;
-        await globalCompany.save();
+      const companyForUpdate = await Company.findById(req.user.companyId); // Attempt to get company if not subadmin
+      if (companyForUpdate) {
+        companyForUpdate.totalcustomers += 1;
+        await companyForUpdate.save();
+      } else {
+        console.warn(
+          'Could not determine company to update totalcustomers for user:',
+          req.user.id,
+          'role:',
+          req.user.role
+        );
       }
     }
 
