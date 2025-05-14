@@ -137,15 +137,15 @@ Follow these steps to set up **Final-Crackers** locally for development or testi
 
 ### Screenshots
 
-- **Login Page**  
+- ### Login Page
   ![Login Page](https://res.cloudinary.com/dkro770eh/image/upload/v1747217538/Screenshot_2025-05-14_152636_lnb4hs.png)
-- **Super Admin Panel**  
+- ### Super Admin Panel
   ![Sub Admin Management](https://res.cloudinary.com/dkro770eh/image/upload/v1747217538/Screenshot_2025-05-14_152649_mvxsdm.png)
-- **Sub Admin Dashboard**  
+- ### Sub Admin Dashboard
   ![Dashboard](https://res.cloudinary.com/dkro770eh/image/upload/v1747217538/Screenshot_2025-05-14_152707_ohojvk.png)
-- **Customer Management**  
+- ### Customer Management
   ![Customer View](https://res.cloudinary.com/dkro770eh/image/upload/v1747217537/Screenshot_2025-05-14_152735_jzkw5s.png)
-- **Invoice Example**  
+- ### Invoice Example
   ![Invoice](https://res.cloudinary.com/dkro770eh/image/upload/v1747217537/Screenshot_2025-05-14_152941_fbtcts.png)  
   _[View Sample PDF Invoice](https://res.cloudinary.com/dkro770eh/raw/upload/v1747216779/Mahesh%20Crackers%20Shop/Vignesh_2025-05-14_15-29-36.pdf)_
 
