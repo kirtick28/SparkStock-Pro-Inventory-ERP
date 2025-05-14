@@ -31,7 +31,8 @@ const Header = ({ role }) => {
       [`${basePath}/inventory`]: 'Inventory Management',
       [`${basePath}/settings`]: 'Settings',
       [`${basePath}/customers`]: 'Customer Management',
-      [`${basePath}/gifts`]: 'Gift Box Management'
+      [`${basePath}/gifts`]: 'Gift Box Management',
+      [`${basePath}/history`]: 'History'
     };
 
     if (path.startsWith(`${basePath}/billing`)) {

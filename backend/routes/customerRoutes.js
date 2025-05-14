@@ -5,26 +5,21 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
 router
-  .route('/')
-  .get(
-    authMiddleware,
-    roleMiddleware(['subadmin']),
-    customerController.getAllCustomers
-  );
-router
-  .route('/single')
-  .get(
-    authMiddleware,
-    roleMiddleware(['subadmin']),
-    customerController.getCustomer
-  );
-router
   .route('/add')
   .post(
     authMiddleware,
     roleMiddleware(['subadmin']),
     customerController.createCustomer
   );
+
+router
+  .route('/')
+  .get(
+    authMiddleware,
+    roleMiddleware(['subadmin']),
+    customerController.getAllCustomers
+  );
+
 router
   .route('/')
   .put(
@@ -32,6 +27,7 @@ router
     roleMiddleware(['subadmin']),
     customerController.updateCustomer
   );
+  
 router
   .route('/history')
   .get(

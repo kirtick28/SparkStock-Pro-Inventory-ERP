@@ -7,24 +7,10 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(
-    authMiddleware,
-    roleMiddleware(['subadmin']),
-    companyController.createCompany
-  );
-router
-  .route('/')
   .get(
     authMiddleware,
     roleMiddleware(['subadmin']),
     companyController.getCompany
-  );
-router
-  .route('/user')
-  .get(
-    authMiddleware,
-    roleMiddleware(['subadmin']),
-    companyController.getCompanyWithUser
   );
 router
   .route('/')
@@ -33,14 +19,6 @@ router
     roleMiddleware(['subadmin']),
     companyController.updateCompany
   );
-router
-  .route('/')
-  .delete(
-    authMiddleware,
-    roleMiddleware(['subadmin']),
-    companyController.deleteCompany
-  );
-
 router
   .route('/details')
   .get(

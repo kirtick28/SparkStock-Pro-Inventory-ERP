@@ -116,51 +116,6 @@ exports.getAllCustomers = async (req, res) => {
   }
 };
 
-exports.getCustomer = async (req, res) => {
-  try {
-    if (req.user && req.user.companyId && req.user.role !== 'superadmin') {
-      const currentCompany = await Company.findById(req.user.companyId);
-      if (!currentCompany) {
-        return res
-          .status(404)
-          .json({ message: 'Associated company not found.' });
-      }
-      if (!currentCompany.status) {
-        return res
-          .status(403)
-          .json({ message: 'Company is not active. Please contact support.' });
-      }
-    } else if (
-      req.user &&
-      req.user.role === 'subadmin' &&
-      !req.user.companyId
-    ) {
-      return res
-        .status(403)
-        .json({ message: 'User not associated with a company.' });
-    }
-    const { id } = req.body;
-    if (!id) {
-      return res.status(400).json({ message: 'Customer ID is required.' });
-    }
-
-    const customer = await Customer.findOne({
-      _id: id,
-      companyId: req.user.companyId
-    });
-    if (!customer) {
-      return res.status(400).json({ message: 'Customer not found.' });
-    }
-
-    res.status(200).json(customer);
-  } catch (error) {
-    res.status(500).json({
-      message: 'Error getting customer details',
-      error: error.message
-    });
-  }
-};
-
 exports.updateCustomer = async (req, res) => {
   try {
     if (req.user && req.user.companyId && req.user.role !== 'superadmin') {
