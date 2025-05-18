@@ -145,15 +145,15 @@ const Customers = () => {
 
       <style>
         {`
-          select {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23${
-              theme === 'dark' ? '9CA3AF' : '4B5563'
-            }' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1.25em;
-          }
-        `}
+            select {
+              background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23${
+                theme === 'dark' ? '9CA3AF' : '4B5563'
+              }' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+              background-repeat: no-repeat;
+              background-position: right 0.75rem center;
+              background-size: 1.25em;
+            }
+          `}
       </style>
     </div>
   );

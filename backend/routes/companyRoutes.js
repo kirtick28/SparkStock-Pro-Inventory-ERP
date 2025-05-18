@@ -16,7 +16,7 @@ router
   .route('/')
   .put(
     authMiddleware,
-    roleMiddleware(['subadmin']),
+    roleMiddleware(['subadmin', 'superadmin']),
     companyController.updateCompany
   );
 router

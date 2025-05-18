@@ -1,6 +1,6 @@
-# 🎉 Final-Crackers: Inventory ERP System
+# 🎉 SparkStock Pro: Inventory ERP System
 
-**Final-Crackers** is a powerful, full-stack Inventory Enterprise Resource Planning (ERP) system designed to optimize business operations with a sleek, modern interface. Built with a **React 19** frontend and a **Node.js/Express** backend, it offers robust user management, company oversight, customer relations, and insightful analytics.
+**SparkStock Pro** is a powerful, full-stack Inventory Enterprise Resource Planning (ERP) system designed to optimize business operations with a sleek, modern interface. Built with a **React 19** frontend and a **Node.js/Express** backend, it offers robust user management, company oversight, customer relations, and insightful analytics.
 
 ---
 
@@ -48,7 +48,7 @@
 
 ## 🚀 Getting Started
 
-Follow these steps to set up **Final-Crackers** locally for development or testing.
+Follow these steps to set up **SparkStock Pro** locally for development or testing.
 
 ### Prerequisites
 
@@ -153,7 +153,7 @@ Follow these steps to set up **Final-Crackers** locally for development or testi
 
 ## 🤝 Contributing
 
-We welcome contributions to enhance **Final-Crackers**! To contribute:
+We welcome contributions to enhance **SparkStock Pro**! To contribute:
 
 1. Fork the repository.
 2. Create a feature branch:
@@ -176,6 +176,6 @@ Ensure your code follows the project's style guide and passes all tests.
 
 ## 📬 Contact
 
-For questions or support, reach out via [GitHub Issues](https://github.com/your-repo/final-crackers/issues).
+For questions or support, reach out via [GitHub Issues](https://github.com/your-repo/sparkstock-pro/issues).
 
 Happy Managing! 🚀

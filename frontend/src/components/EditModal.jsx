@@ -56,7 +56,7 @@ const EditModal = ({ admin, type, onClose, onUpdate }) => {
     const token = localStorage.getItem('cracker_token');
     try {
       const endpoint = isUserEdit
-        ? `${import.meta.env.VITE_BASEURL}/user/update-subadmin` // Changed from /userAuth to /user
+        ? `${import.meta.env.VITE_BASEURL}/user/update-subadmin`
         : `${import.meta.env.VITE_BASEURL}/company`;
       const payload = isUserEdit
         ? { id: admin._id, ...formData }
@@ -100,10 +100,9 @@ const EditModal = ({ admin, type, onClose, onUpdate }) => {
           className={`relative w-full max-w-2xl rounded-2xl shadow-2xl p-8 overflow-y-auto max-h-[90vh] ${
             theme === 'dark'
               ? 'bg-gray-900 text-gray-100 scrollbar-dark'
-              : 'bg-white text-gray-900 scrollbar-light' // Added scrollbar-light for consistency
+              : 'bg-white text-gray-900 scrollbar-light'
           }`}
           style={{
-            // Added inline style for scrollbar properties for cross-browser compatibility
             scrollbarWidth: 'thin',
             scrollbarColor:
               theme === 'dark' ? '#4B5563 #1F2937' : '#D1D5DB #FFFFFF'
@@ -161,7 +160,7 @@ const EditModal = ({ admin, type, onClose, onUpdate }) => {
                   <div key={field.name}>
                     <label
                       className={`block text-sm font-medium mb-2 ${
-                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700' // Corrected: Removed extraneous URL
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
                       }`}
                     >
                       {field.label}
@@ -169,8 +168,8 @@ const EditModal = ({ admin, type, onClose, onUpdate }) => {
                     <input
                       type={field.type}
                       name={field.name}
-                      value={formData[field.name]} // Corrected: Removed trailing 'K'
-                      onChange={handleChange} // Added missing onChange handler
+                      value={formData[field.name]}
+                      onChange={handleChange}
                       className={`w-full p-3 rounded-lg border transition-all duration-200 focus:outline-none focus:ring-2 ${
                         theme === 'dark'
                           ? 'bg-gray-800 border-gray-700 text-gray-100 focus:ring-indigo-500 placeholder-gray-500'
@@ -323,7 +322,6 @@ const EditModal = ({ admin, type, onClose, onUpdate }) => {
           </form>
         </motion.div>
       </motion.div>
-      {/* Add the style tag here, similar to StockTable.jsx */}
       <style>
         {`
           .scrollbar-dark::-webkit-scrollbar {

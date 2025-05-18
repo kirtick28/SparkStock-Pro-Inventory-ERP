@@ -25,21 +25,19 @@ const SubAdminManagement = () => {
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [companyStatusVersion, setCompanyStatusVersion] = useState(0); // Added state
+  const [companyStatusVersion, setCompanyStatusVersion] = useState(0);
 
-  // Fetch sub-admins
   const fetchSubAdmins = async () => {
     try {
       const token = localStorage.getItem('cracker_token');
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_BASEURL}/user/sub-admins`, // Changed from /userAuth to /user
+        `${import.meta.env.VITE_BASEURL}/user/sub-admins`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
       setSubAdmins(response.data);
-      // Apply current search query to newly fetched data
       const query = searchQuery.toLowerCase();
       if (query) {
         setFilteredAdmins(
@@ -55,7 +53,7 @@ const SubAdminManagement = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch sub-admins');
-      setSubAdmins([]); // Clear data on error
+      setSubAdmins([]);
       setFilteredAdmins([]);
     } finally {
       setLoading(false);
@@ -146,29 +144,22 @@ const SubAdminManagement = () => {
   // Handle update
   const handleUpdate = (updatedAdminData) => {
     const updatedAdmins = subAdmins.map((admin) => {
-      // Ensure we are matching by _id
       if (admin._id === (updatedAdminData._id || updatedAdminData.id)) {
-        // The backend might return the full user object or a specific structure.
-        // For EditModal, it returns `response.data.subAdmin` or `response.data.company` nested.
-        // We need to merge intelligently.
         if (
           updatedAdminData.companyId &&
           typeof updatedAdminData.companyId === 'object'
         ) {
-          // This case comes from EditModal company edit
           return {
             ...admin,
             companyId: { ...admin.companyId, ...updatedAdminData.companyId }
           };
         } else {
-          // This case comes from EditModal user edit or status toggle
           return { ...admin, ...updatedAdminData };
         }
       }
       return admin;
     });
     setSubAdmins(updatedAdmins);
-    // Re-apply search filter
     const query = searchQuery.toLowerCase();
     setFilteredAdmins(
       updatedAdmins.filter(
@@ -495,6 +486,7 @@ const SubAdminManagement = () => {
             type={editType}
             onClose={closeEdit}
             onUpdate={handleUpdate}
+            onSuccess={fetchSubAdmins}
           />
         )}
         {isCreateModalOpen && (

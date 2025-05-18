@@ -30,16 +30,21 @@ exports.getAllCompanies = async (req, res) => {
 
 exports.updateCompany = async (req, res) => {
   try {
+    let id;
     const updatedData = req.body;
+    if (req.user.role === 'superadmin') {
+      id = req.body.id;
+      delete updatedData.id;
+    } else {
+      id = req.user.companyId;
+    }
     if (updatedData.companyname) {
       updatedData.companyname = updatedData.companyname.trim();
     }
-    const company = await Company.findOneAndUpdate(
-      { admin: req.user.id },
-      updatedData,
-      { new: true }
-    );
-    const user = await User.findOne({ _id: req.user.id });
+    const company = await Company.findOneAndUpdate({ _id: id }, updatedData, {
+      new: true
+    });
+    const user = await User.findOne({ _id: company.admin });
     const payload = {
       _id: user._id,
       name: user.name,

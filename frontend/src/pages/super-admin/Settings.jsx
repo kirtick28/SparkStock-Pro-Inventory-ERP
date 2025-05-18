@@ -5,10 +5,13 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../../contexts/ThemeContext';
 import Loader from '../../components/common/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 
 function Settings() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [userDetails, setUserDetails] = useState({
     name: '',
     email: '',
@@ -228,18 +231,29 @@ function Settings() {
                   >
                     New Password
                   </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={userDetails.password}
-                    onChange={handleUserChange}
-                    className={`w-full p-3 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-100'
-                        : 'border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
-                    placeholder="Enter new password"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      value={userDetails.password}
+                      onChange={handleUserChange}
+                      className={`w-full p-3 rounded-lg border ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600 text-gray-100'
+                          : 'border-gray-300 text-gray-900'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label
@@ -249,18 +263,35 @@ function Settings() {
                   >
                     Confirm Password
                   </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={userDetails.confirmPassword}
-                    onChange={handleUserChange}
-                    className={`w-full p-3 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-gray-100'
-                        : 'border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
-                    placeholder="Confirm new password"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      value={userDetails.confirmPassword}
+                      onChange={handleUserChange}
+                      className={`w-full p-3 rounded-lg border ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600 text-gray-100'
+                          : 'border-gray-300 text-gray-900'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all`}
+                      placeholder="Confirm new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={20} />
+                      ) : (
+                        <Eye size={20} />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="md:col-span-2">
                   <motion.button
