@@ -12,7 +12,7 @@ import Unauthorized from './pages/Unauthorized';
 import SubAdminDashboard from './pages/sub-admin/dashboard/Dashboard';
 import StockTable from './pages/sub-admin/inventory/StockTable';
 import Customers from './pages/sub-admin/customer/Customers';
-import PurchaseHistory from './pages/sub-admin/purchasehistory/PurchaseHistory';
+import PurchaseHistory from './pages/sub-admin/purchaseHistory/PurchaseHistory';
 import { ThemeProvider } from './contexts/ThemeContext';
 import GiftBox from './pages/sub-admin/giftbox/GiftIndex';
 import BillingProduct from './pages/sub-admin/billing/BillingProduct';
