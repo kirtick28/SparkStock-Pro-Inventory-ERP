@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Edit, Trash2, Package } from 'lucide-react';
-import EditPopup from './EditPopup';
+import EditPopup from './editPopup';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { toast } from 'react-toastify';
 
