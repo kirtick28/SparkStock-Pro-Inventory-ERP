@@ -2,6 +2,21 @@
 
 **SparkStock Pro** is a powerful, full-stack Inventory Enterprise Resource Planning (ERP) system designed to optimize business operations with a sleek, modern interface. Built with a **React 19** frontend and a **Node.js/Express** backend, it offers robust user management, company oversight, customer relations, and insightful analytics.
 
+## 🔗 Live Demo
+
+**Website:** [SparkStock Pro Live Demo](https://spark-stock-pro-inventory-erp.vercel.app/)
+
+### Demo Credentials
+
+- **Super Admin**
+
+  - Email: superadmin@gmail.com
+  - Password: superadmin
+
+- **Sub Admin**
+  - Email: subadmin@gmail.com
+  - Password: subadmin
+
 ---
 
 ## 🌟 Key Features
@@ -179,3 +194,7 @@ Ensure your code follows the project's style guide and passes all tests.
 For questions or support, reach out via [GitHub Issues](https://github.com/your-repo/sparkstock-pro/issues).
 
 Happy Managing! 🚀
+
+```
+
+```
