@@ -194,7 +194,3 @@ Ensure your code follows the project's style guide and passes all tests.
 For questions or support, reach out via [GitHub Issues](https://github.com/your-repo/sparkstock-pro/issues).
 
 Happy Managing! 🚀
-
-```
-
-```
