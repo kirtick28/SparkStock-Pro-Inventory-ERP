@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Login from './pages/auth/Login';
+import LandingPage from './pages/LandingPage';
 import BaseLayout from './components/common/BaseLayout';
 import Unauthorized from './pages/Unauthorized';
 import SubAdminDashboard from './pages/sub-admin/dashboard/Dashboard';
@@ -27,6 +28,7 @@ const App = () => {
         <AuthProvider>
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -68,8 +70,7 @@ const App = () => {
             </Route>
 
             {/* Redirects */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </ThemeProvider>
