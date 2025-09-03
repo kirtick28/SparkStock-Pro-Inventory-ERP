@@ -13,14 +13,26 @@ export default function LandingPage() {
   const handleNavClick = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
-      const headerHeight = headerRef.current?.offsetHeight || 60;
-      const sectionTop =
-        section.getBoundingClientRect().top + window.scrollY - headerHeight;
+      // Small delay to ensure mobile menu closes first
+      setTimeout(() => {
+        // Get the current header height dynamically
+        const headerElement = headerRef.current;
+        const headerHeight = headerElement
+          ? headerElement.getBoundingClientRect().height
+          : 80;
 
-      window.scrollTo({
-        top: sectionTop,
-        behavior: 'smooth'
-      });
+        // Use a larger offset to ensure the section is properly visible
+        // Account for sticky header + extra spacing
+        const offset = headerHeight - 130; // Increased buffer for better visibility
+
+        const sectionTop =
+          section.getBoundingClientRect().top + window.scrollY - offset;
+
+        window.scrollTo({
+          top: Math.max(0, sectionTop), // Ensure we don't scroll to negative values
+          behavior: 'smooth'
+        });
+      }, 150); // Increased delay to ensure mobile menu animation completes
     }
   };
 
@@ -35,13 +47,15 @@ export default function LandingPage() {
         theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
       } transition-colors duration-500`}
     >
-      <SharedHeader
-        variant="landing"
-        showNavigation={true}
-        navigationItems={navigationItems}
-        showLoginButton={true}
-        handleNavClick={handleNavClick}
-      />
+      <div ref={headerRef}>
+        <SharedHeader
+          variant="landing"
+          showNavigation={true}
+          navigationItems={navigationItems}
+          showLoginButton={true}
+          handleNavClick={handleNavClick}
+        />
+      </div>
       <HeroSection />
       <FeaturesSection />
       <ContactSection />
