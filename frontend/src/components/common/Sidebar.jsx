@@ -1,14 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
   Settings,
   LogOut,
   Package,
-  FileText,
   Gift,
-  History
+  History,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -18,118 +18,309 @@ const roleConfig = {
     {
       name: 'Sub Admin Management',
       path: '/super-admin/subadmins',
-      icon: LayoutDashboard
+      icon: Users
     }
   ],
   subadmin: [
     { name: 'Dashboard', path: '/sub-admin/dashboard', icon: LayoutDashboard },
     { name: 'Inventory', path: '/sub-admin/inventory', icon: Package },
-    { name: 'Gifts', path: '/sub-admin/gifts', icon: Gift },
+    { name: 'Gift Boxes', path: '/sub-admin/gifts', icon: Gift },
     { name: 'Customers', path: '/sub-admin/customers', icon: Users },
     { name: 'Purchase History', path: '/sub-admin/history', icon: History }
   ]
 };
 
-const Sidebar = ({ role }) => {
+const Sidebar = ({ role, isOpen, isMobile }) => {
   const { logout } = useAuth();
   const { theme } = useTheme();
   const navItems = [...(roleConfig[role] || [])];
   const toNav = role === 'superadmin' ? 'super-admin' : 'sub-admin';
+
+  const sidebarVariants = {
+    open: {
+      width: isMobile ? '16rem' : '16rem', // Full width on mobile when open
+      x: 0,
+      transition: {
+        duration: 0.3,
+        ease: 'easeInOut'
+      }
+    },
+    closed: {
+      width: isMobile ? '16rem' : '5rem', // Still same width on mobile but positioned off-screen
+      x: isMobile ? '-100%' : 0, // Slide off-screen on mobile
+      transition: {
+        duration: 0.3,
+        ease: 'easeInOut'
+      }
+    }
+  };
+
+  const contentVariants = {
+    open: {
+      opacity: 1,
+      transition: {
+        delay: 0.1,
+        duration: 0.2
+      }
+    },
+    closed: {
+      opacity: 0,
+      transition: {
+        duration: 0.1
+      }
+    }
+  };
+
   return (
     <motion.aside
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      className={`fixed top-0 left-0 h-full w-64 ${
+      initial="open"
+      animate={isOpen ? 'open' : 'closed'}
+      variants={sidebarVariants}
+      className={`fixed top-0 left-0 h-full z-50 ${
         theme === 'dark'
-          ? 'bg-gray-800 border-gray-700'
-          : 'bg-white border-gray-200'
-      } border-r shadow-lg p-6 flex flex-col`} // Added flex flex-col
+          ? 'bg-gray-900/95 border-gray-700'
+          : 'bg-white/95 border-gray-200'
+      } border-r backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden ${
+        isMobile ? 'w-64' : '' // Fixed width on mobile
+      }`}
     >
-      <div>
-        {' '}
-        <div className="mb-8">
-          <span
-            className={`text-2xl font-bold ${
-              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
-            }`}
+      {/* Logo Section */}
+      <div
+        className={`${
+          isOpen || isMobile ? 'p-6' : 'p-4'
+        } border-b border-gray-200 dark:border-gray-700 transition-all duration-300`}
+      >
+        <div
+          className={`flex items-center ${
+            isOpen || isMobile ? 'gap-3' : 'justify-center'
+          }`}
+        >
+          <motion.div
+            whileHover={{ rotate: 360 }}
+            transition={{ duration: 0.6 }}
+            className="flex-shrink-0"
           >
-            Crackers ERP
-          </span>
-        </div>
-        <div className="space-y-2">
-          {navItems.map((item) => (
-            <motion.div
-              key={item.name}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+            <div
+              className={`${
+                isOpen || isMobile ? 'w-10 h-10' : 'w-8 h-8'
+              } rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center ${
+                theme === 'dark' ? 'shadow-blue-500/25' : 'shadow-blue-500/25'
+              } shadow-lg transition-all duration-300`}
             >
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                    isActive
-                      ? `${
-                          theme === 'dark'
-                            ? 'bg-blue-900 text-blue-400'
-                            : 'bg-blue-50 text-blue-600'
-                        } font-medium`
-                      : `${
-                          theme === 'dark'
-                            ? 'text-gray-300 hover:bg-gray-700'
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`
-                  }`
-                }
+              <Zap className="text-white" size={isOpen || isMobile ? 20 : 16} />
+            </div>
+          </motion.div>
+
+          <AnimatePresence>
+            {(isOpen || isMobile) && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
               >
-                <item.icon size={20} />
-                <span>{item.name}</span>
-              </NavLink>
-            </motion.div>
-          ))}
+                <h2
+                  className={`text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent`}
+                >
+                  SparkPro
+                </h2>
+                <p
+                  className={`text-xs ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  Inventory System
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      <div className="mt-auto">
-        {' '}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="mb-2" // Add some margin below settings
-        >
+      {/* Navigation */}
+      <div
+        className={`flex-1 ${
+          isOpen ? 'p-4' : 'p-2'
+        } space-y-2 transition-all duration-300`}
+      >
+        {navItems.map((item, index) => (
+          <motion.div
+            key={item.name}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <NavLink
+              to={item.path}
+              className={({ isActive }) =>
+                `group flex items-center ${
+                  isOpen ? 'gap-3 px-3 py-3' : 'justify-center px-2 py-4'
+                } rounded-xl transition-all duration-200 relative overflow-hidden ${
+                  isActive
+                    ? `${
+                        theme === 'dark'
+                          ? 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                          : 'bg-blue-50 text-blue-600 border-blue-200'
+                      } border shadow-sm`
+                    : `${
+                        theme === 'dark'
+                          ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      } hover:scale-[1.02]`
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {/* Background gradient for active state */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavItem"
+                      className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-xl"
+                      transition={{
+                        type: 'spring',
+                        bounce: 0.2,
+                        duration: 0.6
+                      }}
+                    />
+                  )}
+
+                  <div
+                    className={`relative z-10 flex items-center ${
+                      isOpen ? 'gap-3' : 'justify-center'
+                    } w-full`}
+                  >
+                    <div
+                      className={`flex-shrink-0 ${
+                        isActive ? 'scale-110' : 'group-hover:scale-110'
+                      } transition-transform`}
+                    >
+                      <item.icon size={isOpen ? 20 : 22} />
+                    </div>
+
+                    <AnimatePresence>
+                      {isOpen && (
+                        <motion.span
+                          variants={contentVariants}
+                          initial="closed"
+                          animate="open"
+                          exit="closed"
+                          className="font-medium text-sm whitespace-nowrap"
+                        >
+                          {item.name}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Tooltip for collapsed state */}
+                    {!isOpen && (
+                      <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
+                        <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
+                        {item.name}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </NavLink>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Bottom Section */}
+      <div
+        className={`${
+          isOpen ? 'p-4' : 'p-2'
+        } border-t border-gray-200 dark:border-gray-700 space-y-2 transition-all duration-300`}
+      >
+        {/* Settings */}
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <NavLink
             to={`/${toNav}/settings`}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              `group flex items-center ${
+                isOpen ? 'gap-3 px-3 py-3' : 'justify-center px-2 py-4'
+              } rounded-xl transition-all duration-200 relative ${
                 isActive
                   ? `${
                       theme === 'dark'
-                        ? 'bg-blue-900 text-blue-400'
+                        ? 'bg-blue-600/20 text-blue-400'
                         : 'bg-blue-50 text-blue-600'
-                    } font-medium`
+                    } border border-blue-200 dark:border-blue-500/30`
                   : `${
                       theme === 'dark'
-                        ? 'text-gray-300 hover:bg-gray-700'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`
               }`
             }
           >
-            <Settings size={20} />
-            <span>Settings</span>
+            <Settings size={isOpen ? 20 : 22} className="flex-shrink-0" />
+            <AnimatePresence>
+              {isOpen && (
+                <motion.span
+                  variants={contentVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  className="font-medium text-sm whitespace-nowrap"
+                >
+                  Settings
+                </motion.span>
+              )}
+            </AnimatePresence>
+
+            {/* Tooltip for collapsed state */}
+            {!isOpen && (
+              <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
+                <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
+                Settings
+              </div>
+            )}
           </NavLink>
         </motion.div>
-        <button
+
+        {/* Logout */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={logout}
-          className={`flex items-center gap-3 w-full px-4 py-3 ${
+          className={`group flex items-center ${
+            isOpen ? 'gap-3' : 'justify-center'
+          } w-full ${
+            isOpen ? 'px-3 py-3' : 'px-2 py-4'
+          } rounded-xl transition-all duration-200 relative ${
             theme === 'dark'
-              ? 'text-red-400 hover:bg-red-900'
-              : 'text-red-600 hover:bg-red-50'
-          } rounded-lg transition-all`}
+              ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
+              : 'text-red-600 hover:bg-red-50 hover:text-red-700'
+          }`}
         >
-          <LogOut size={20} />
-          <span>Logout</span>
-        </button>
+          <LogOut size={isOpen ? 20 : 22} className="flex-shrink-0" />
+          <AnimatePresence>
+            {isOpen && (
+              <motion.span
+                variants={contentVariants}
+                initial="closed"
+                animate="open"
+                exit="closed"
+                className="font-medium text-sm whitespace-nowrap"
+              >
+                Sign Out
+              </motion.span>
+            )}
+          </AnimatePresence>
+
+          {/* Tooltip for collapsed state */}
+          {!isOpen && (
+            <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
+              <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
+              Sign Out
+            </div>
+          )}
+        </motion.button>
       </div>
+
+      {/* Collapse indicator for collapsed state - removed for cleaner look */}
     </motion.aside>
   );
 };
