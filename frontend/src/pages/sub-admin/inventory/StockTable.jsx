@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   CheckCircle,
   SortAsc,
-  SortDesc
+  SortDesc,
+  MoreVertical
 } from 'lucide-react';
 import Popup from './Popup';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -33,6 +34,7 @@ function StockTable() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const getProducts = async () => {
     const token = localStorage.getItem('cracker_token');
@@ -161,20 +163,17 @@ function StockTable() {
 
   return (
     <div
-      className={`min-h-screen p-4 md:p-6 ${
-        theme === 'dark'
-          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900'
-          : 'bg-gradient-to-br from-blue-50 to-indigo-100'
+      className={`min-h-screen p-3 md:p-6 ${
+        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
       }`}
     >
       {loading && <Loader />}
 
-      {/* Stats Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6"
       >
         {stats.map((stat, index) => (
           <motion.div
@@ -186,12 +185,12 @@ function StockTable() {
               theme === 'dark'
                 ? 'bg-gray-800/50 border-gray-700'
                 : 'bg-white border-gray-200'
-            } backdrop-blur-sm rounded-xl border p-4 hover:shadow-lg transition-all duration-300`}
+            } backdrop-blur-sm rounded-xl border p-3 md:p-4 hover:shadow-lg transition-all duration-300`}
           >
             <div className="flex items-center justify-between">
               <div>
                 <p
-                  className={`text-xs font-medium ${
+                  className={`text-xs md:text-sm font-medium ${
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                   }`}
                 >
@@ -218,7 +217,7 @@ function StockTable() {
                 className={`p-2 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}
               >
                 <stat.icon
-                  size={20}
+                  size={18}
                   className={`text-${stat.color}-600 dark:text-${stat.color}-400`}
                 />
               </div>
@@ -236,13 +235,13 @@ function StockTable() {
           theme === 'dark'
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white border-gray-200'
-        } backdrop-blur-sm rounded-xl border p-4 mb-6`}
+        } backdrop-blur-sm rounded-xl border p-3 md:p-4 mb-4 md:mb-6`}
       >
-        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
+          {/* Search - Made more compact */}
+          <div className="flex-1 min-w-0 relative">
             <Search
-              size={20}
+              size={18}
               className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
               }`}
@@ -252,7 +251,7 @@ function StockTable() {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm transition-colors ${
+              className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-colors ${
                 theme === 'dark'
                   ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:border-blue-500'
                   : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
@@ -260,8 +259,8 @@ function StockTable() {
             />
           </div>
 
-          {/* Filters and Sort */}
-          <div className="flex items-center gap-3">
+          {/* Desktop Filters and Actions */}
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
             <div className="flex items-center gap-2">
               <Filter
                 size={16}
@@ -332,7 +331,7 @@ function StockTable() {
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                 }`}
               >
-                <Upload size={16} className="mr-1.5" />
+                <Upload size={16} className="inline mr-1.5" />
                 Import
               </motion.button>
 
@@ -342,12 +341,123 @@ function StockTable() {
                 onClick={() => setShowAddModal(true)}
                 className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                <Plus size={16} className="mr-1.5" />
-                Add Product
+                <Plus size={16} className="inline mr-1.5" />
+                Add
               </motion.button>
             </div>
           </div>
+
+          {/* Mobile Controls */}
+          <div className="flex md:hidden items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Filter size={16} />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowImportModal(true)}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Upload size={16} />
+              </motion.button>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowAddModal(true)}
+              className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium"
+            >
+              <Plus size={16} />
+            </motion.button>
+          </div>
         </div>
+
+        {/* Mobile Expanded Filters */}
+        {showMobileFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 md:hidden"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">
+                  Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-gray-200'
+                      : 'bg-gray-50 border-gray-300 text-gray-900'
+                  }`}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="low-stock">Low Stock</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">
+                  Sort By
+                </label>
+                <div className="flex gap-1">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="name">Name</option>
+                    <option value="price">Price</option>
+                    <option value="stockavailable">Stock</option>
+                    <option value="totalsales">Sales</option>
+                  </select>
+
+                  <button
+                    onClick={() =>
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                    }
+                    className={`p-2 rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    {sortOrder === 'asc' ? (
+                      <SortAsc size={16} />
+                    ) : (
+                      <SortDesc size={16} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Products Display */}
@@ -778,8 +888,8 @@ function StockTable() {
                   {/* Card Content */}
                   <div className="space-y-3">
                     {/* Stock & Price Row */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex flex-col xs:flex-row xs:gap-3 gap-2">
+                      <div className="flex-1 text-center p-2 xs:p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         {editCracker?._id === product._id ? (
                           <input
                             type="number"
@@ -798,7 +908,7 @@ function StockTable() {
                           />
                         ) : (
                           <p
-                            className={`font-bold text-lg ${getStockColor(
+                            className={`font-bold text-base xs:text-lg ${getStockColor(
                               product.stockavailable
                             )}`}
                           >
@@ -806,7 +916,7 @@ function StockTable() {
                           </p>
                         )}
                         <p
-                          className={`text-xs ${
+                          className={`text-xs xs:text-sm ${
                             theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
@@ -814,7 +924,7 @@ function StockTable() {
                         </p>
                       </div>
 
-                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="flex-1 text-center p-2 xs:p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                         {editCracker?._id === product._id ? (
                           <input
                             type="number"
@@ -845,8 +955,8 @@ function StockTable() {
                     </div>
 
                     {/* Sales & Revenue Row */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <div className="flex flex-col xs:flex-row xs:gap-3 gap-2">
+                      <div className="flex-1 text-center p-2 xs:p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                         <p className="text-purple-600 dark:text-purple-400 font-bold text-lg">
                           {product.totalsales}
                         </p>
@@ -858,7 +968,7 @@ function StockTable() {
                           Sales
                         </p>
                       </div>
-                      <div className="text-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                      <div className="flex-1 text-center p-2 xs:p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
                         <p className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">
                           ₹
                           {(

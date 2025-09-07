@@ -6,7 +6,8 @@ const {
   getAllGiftBoxes,
   updateGiftBoxById,
   getGiftBoxById,
-  getAllActiveGiftBox
+  getAllActiveGiftBox,
+  deleteGiftBoxById
 } = require('../controllers/giftboxController');
 
 const authMiddleware = require('../middlewares/authMiddleware');
@@ -31,6 +32,12 @@ router.get(
   authMiddleware,
   roleMiddleware(['subadmin']),
   getAllActiveGiftBox
+);
+router.delete(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['subadmin']),
+  deleteGiftBoxById
 );
 
 module.exports = router;

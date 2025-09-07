@@ -20,8 +20,35 @@ exports.createGiftBox = async (req, res) => {
 
 exports.getAllGiftBoxes = async (req, res) => {
   try {
-    const giftBoxes = await GiftBox.find({ companyId: req.user.companyId });
-    res.status(200).json(giftBoxes);
+    const giftBoxes = await GiftBox.find({
+      companyId: req.user.companyId
+    }).populate({
+      path: 'products.productId',
+      model: Product,
+      select: 'name price image stockavailable totalsales totalrevenue status'
+    });
+
+    // Transform the response to include product details in a consistent format
+    const transformedGiftBoxes = giftBoxes.map((giftBox) => {
+      const giftBoxObj = giftBox.toObject();
+      if (giftBoxObj.products) {
+        giftBoxObj.products = giftBoxObj.products.map((product) => ({
+          _id: product.productId._id,
+          productId: product.productId._id,
+          name: product.productId.name,
+          price: product.productId.price,
+          image: product.productId.image,
+          stockavailable: product.productId.stockavailable,
+          totalsales: product.productId.totalsales,
+          totalrevenue: product.productId.totalrevenue,
+          status: product.productId.status,
+          quantity: product.quantity
+        }));
+      }
+      return giftBoxObj;
+    });
+
+    res.status(200).json(transformedGiftBoxes);
   } catch (error) {
     res
       .status(500)
@@ -119,5 +146,32 @@ exports.getAllActiveGiftBox = async (req, res) => {
     res
       .status(500)
       .json({ message: 'Error retrieving GiftBoxes', error: error.message });
+  }
+};
+
+exports.deleteGiftBoxById = async (req, res) => {
+  try {
+    if (!req.params.id) {
+      return res.status(400).json({ message: 'GiftBox ID is required!' });
+    }
+
+    const deletedGiftBox = await GiftBox.findOneAndDelete({
+      _id: req.params.id,
+      companyId: req.user.companyId
+    });
+
+    if (!deletedGiftBox) {
+      return res.status(404).json({ message: 'GiftBox not found!' });
+    }
+
+    res.status(200).json({
+      message: 'GiftBox deleted successfully!',
+      data: deletedGiftBox
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error deleting GiftBox',
+      error: error.message
+    });
   }
 };
