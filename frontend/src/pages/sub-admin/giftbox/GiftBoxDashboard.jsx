@@ -17,7 +17,8 @@ import {
   DollarSign,
   Box,
   SortAsc,
-  SortDesc
+  SortDesc,
+  RefreshCw
 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import {
@@ -27,6 +28,7 @@ import {
   setSelectedGiftBox
 } from '../../../store/slices/giftBoxSlice';
 import { fetchProducts } from '../../../store/slices/productsSlice';
+import useSmartFetch from '../../../hooks/useSmartFetch';
 import Loader from '../../../components/common/Loader';
 import GiftBoxBuilder from './GiftBoxBuilder';
 import GiftBoxDetails from './GiftBoxDetails';
@@ -47,10 +49,19 @@ const GiftBoxDashboard = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [editingGiftBox, setEditingGiftBox] = useState(null);
 
-  useEffect(() => {
-    dispatch(fetchGiftBoxes());
-    dispatch(fetchProducts());
-  }, [dispatch]);
+  // Smart fetching with caching
+  const {
+    loading: giftBoxLoading,
+    refresh: refreshGiftBoxes,
+    isDataStale: giftBoxDataStale
+  } = useSmartFetch(fetchGiftBoxes, 'giftBox');
+
+  const { loading: productsLoading, refresh: refreshProducts } = useSmartFetch(
+    fetchProducts,
+    'products'
+  );
+
+  const loading = giftBoxLoading || productsLoading;
 
   const filteredGiftBoxes = giftBoxes
     .filter((giftBox) => {

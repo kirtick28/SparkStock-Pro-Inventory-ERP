@@ -7,7 +7,17 @@ const cors = require('cors');
 dotenv.config();
 const app = express();
 app.use(cors());
-app.use(morgan('dev'));
+morgan.token('time12', () => {
+  const now = new Date();
+  return now.toLocaleTimeString('en-US', { hour12: true });
+});
+
+app.use(
+  morgan(
+    ':time12 :method :url :status :response-time ms - :res[content-length]'
+  )
+);
+
 app.use(express.json());
 
 app.use('/api/auth', require('./routes/authRoutes')); // Added auth routes

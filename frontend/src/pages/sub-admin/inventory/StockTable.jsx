@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,48 +18,47 @@ import {
   CheckCircle,
   SortAsc,
   SortDesc,
-  MoreVertical
+  MoreVertical,
+  RefreshCw
 } from 'lucide-react';
 import Popup from './Popup';
 import { useTheme } from '../../../contexts/ThemeContext';
+import {
+  fetchAllProducts,
+  invalidateCache
+} from '../../../store/slices/productsSlice';
+import useSmartFetch from '../../../hooks/useSmartFetch';
 import Loader from '../../../components/common/Loader';
 
 function StockTable() {
   const { theme } = useTheme();
+  const dispatch = useDispatch();
+
+  // Get products from Redux store
+  const { allProducts } = useSelector((state) => state.products);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editCracker, setEditCracker] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const getProducts = async () => {
-    const token = localStorage.getItem('cracker_token');
-    try {
-      setLoading(true);
-      const response = await axios.get(
-        `${import.meta.env.VITE_BASEURL}/product/`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setProducts(response.data);
-    } catch (error) {
-      if (error.response && error.response.status !== 500) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('Server error, please try again');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Smart fetching with caching
+  const { loading, refresh, isDataStale } = useSmartFetch(
+    fetchAllProducts,
+    'products'
+  );
 
-  useEffect(() => {
-    getProducts();
-  }, []);
+  // Use products from Redux store instead of local state
+  const products = allProducts;
+
+  // Refresh data after operations
+  const refreshData = () => {
+    refresh();
+  };
 
   const handleUpdate = async (crackerId) => {
     const token = localStorage.getItem('cracker_token');
@@ -70,7 +70,7 @@ function StockTable() {
       );
       if (response.status === 200) {
         toast.success('Product updated successfully!');
-        getProducts();
+        refreshData(); // Use refresh instead of getProducts
         setEditCracker(null);
       }
     } catch (error) {
@@ -321,6 +321,25 @@ function StockTable() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 pl-2 border-l border-gray-300 dark:border-gray-600">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={refreshData}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                } ${isDataStale ? 'ring-2 ring-orange-400' : ''}`}
+                title={
+                  isDataStale
+                    ? 'Data is stale - click to refresh'
+                    : 'Refresh data'
+                }
+              >
+                <RefreshCw size={16} className="inline mr-1.5" />
+                Refresh
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -1034,14 +1053,14 @@ function StockTable() {
           <Popup
             type="add"
             onClose={() => setShowAddModal(false)}
-            onSave={getProducts}
+            onSave={refreshData}
           />
         )}
         {showImportModal && (
           <Popup
             type="import"
             onClose={() => setShowImportModal(false)}
-            onSave={getProducts}
+            onSave={refreshData}
           />
         )}
       </AnimatePresence>
