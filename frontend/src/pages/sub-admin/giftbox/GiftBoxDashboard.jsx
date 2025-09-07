@@ -37,8 +37,13 @@ const GiftBoxDashboard = () => {
   const { theme } = useTheme();
   const dispatch = useDispatch();
 
-  const { giftBoxes, loading, error, selectedGiftBox, isDeleting } =
-    useSelector((state) => state.giftBox);
+  const {
+    giftBoxes,
+    loading: reduxLoading,
+    error,
+    selectedGiftBox,
+    isDeleting
+  } = useSelector((state) => state.giftBox);
 
   const [showBuilder, setShowBuilder] = useState(false);
   const [showDetails, setShowDetails] = useState(false);

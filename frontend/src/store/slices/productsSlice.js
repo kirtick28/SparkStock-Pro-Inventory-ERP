@@ -1,10 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { toa      .addCase(fetchAllProducts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.allProducts = action.payload;
-        state.lastFetched = Date.now();
-      }); from 'react-toastify';
+import { toast } from 'react-toastify';
 
 // Async thunks
 export const fetchProducts = createAsyncThunk(
@@ -12,7 +8,7 @@ export const fetchProducts = createAsyncThunk(
   async (forceRefresh = false, { getState, rejectWithValue }) => {
     const state = getState();
     const { lastFetched, cacheTimeout, products } = state.products;
-    
+
     // Check if we have cached data and it's still valid
     if (!forceRefresh && lastFetched && products.length > 0) {
       const timeSinceLastFetch = Date.now() - lastFetched;
@@ -46,7 +42,7 @@ export const fetchAllProducts = createAsyncThunk(
   async (forceRefresh = false, { getState, rejectWithValue }) => {
     const state = getState();
     const { lastFetched, cacheTimeout, allProducts } = state.products;
-    
+
     // Check if we have cached data and it's still valid
     if (!forceRefresh && lastFetched && allProducts.length > 0) {
       const timeSinceLastFetch = Date.now() - lastFetched;
@@ -136,6 +132,7 @@ const productsSlice = createSlice({
       .addCase(fetchAllProducts.fulfilled, (state, action) => {
         state.loading = false;
         state.allProducts = action.payload;
+        state.lastFetched = Date.now();
       })
       .addCase(fetchAllProducts.rejected, (state, action) => {
         state.loading = false;
@@ -144,6 +141,12 @@ const productsSlice = createSlice({
   }
 });
 
-export const { setSearchTerm, clearSearch, clearError, invalidateCache, forceRefresh } = productsSlice.actions;
+export const {
+  setSearchTerm,
+  clearSearch,
+  clearError,
+  invalidateCache,
+  forceRefresh
+} = productsSlice.actions;
 
 export default productsSlice.reducer;
