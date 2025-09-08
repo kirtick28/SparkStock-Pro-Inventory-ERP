@@ -23,11 +23,7 @@ import {
 } from 'lucide-react';
 import Popup from './Popup';
 import { useTheme } from '../../../contexts/ThemeContext';
-import {
-  fetchAllProducts,
-  invalidateCache
-} from '../../../store/slices/productsSlice';
-import useSmartFetch from '../../../hooks/useSmartFetch';
+import { fetchAllProducts } from '../../../store/slices/productsSlice';
 import Loader from '../../../components/common/Loader';
 
 function StockTable() {
@@ -35,7 +31,7 @@ function StockTable() {
   const dispatch = useDispatch();
 
   // Get products from Redux store
-  const { allProducts } = useSelector((state) => state.products);
+  const { allProducts, loading } = useSelector((state) => state.products);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -46,18 +42,17 @@ function StockTable() {
   const [sortOrder, setSortOrder] = useState('asc');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Smart fetching with caching
-  const { loading, refresh, isDataStale } = useSmartFetch(
-    fetchAllProducts,
-    'products'
-  );
+  // Fetch data on component mount
+  useEffect(() => {
+    dispatch(fetchAllProducts());
+  }, [dispatch]);
 
   // Use products from Redux store instead of local state
   const products = allProducts;
 
   // Refresh data after operations
   const refreshData = () => {
-    refresh();
+    dispatch(fetchAllProducts());
   };
 
   const handleUpdate = async (crackerId) => {
@@ -329,12 +324,8 @@ function StockTable() {
                   theme === 'dark'
                     ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                } ${isDataStale ? 'ring-2 ring-orange-400' : ''}`}
-                title={
-                  isDataStale
-                    ? 'Data is stale - click to refresh'
-                    : 'Refresh data'
-                }
+                }`}
+                title="Refresh data"
               >
                 <RefreshCw size={16} className="inline mr-1.5" />
                 Refresh

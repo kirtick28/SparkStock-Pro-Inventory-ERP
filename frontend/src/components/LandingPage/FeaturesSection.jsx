@@ -62,9 +62,9 @@ export default function FeaturesSection() {
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.6,
+        duration: 0.3,
         when: 'beforeChildren',
-        staggerChildren: 0.1
+        staggerChildren: 0.05
       }
     }
   };
@@ -74,7 +74,7 @@ export default function FeaturesSection() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: 'easeOut' }
+      transition: { duration: 0.3, ease: 'easeOut' }
     }
   };
 
@@ -127,7 +127,7 @@ export default function FeaturesSection() {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: 0.1 }}
         className="max-w-7xl mx-auto relative z-10"
       >
         {/* Header */}
@@ -246,10 +246,10 @@ const FeatureCard = ({ feature, index, theme }) => {
     <motion.div
       initial={{ opacity: 0, y: 50 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.6, delay: index * 0.1 }}
+      viewport={{ once: true, amount: 0.1 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ y: -8, scale: 1.02 }}
-      className={`group relative overflow-hidden rounded-2xl p-8 h-full transition-all duration-500 ${
+      className={`group relative overflow-hidden rounded-2xl p-8 h-full transition-all duration-200 ${
         theme === 'dark'
           ? 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border border-gray-700/50 hover:border-gray-600/50'
           : 'bg-gradient-to-br from-white/90 to-gray-50/90 border border-gray-200/50 hover:border-gray-300/50'
@@ -257,7 +257,7 @@ const FeatureCard = ({ feature, index, theme }) => {
     >
       {/* Background Gradient */}
       <div
-        className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 bg-gradient-to-br ${colorClasses.icon}`}
+        className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-200 bg-gradient-to-br ${colorClasses.icon}`}
       />
 
       {/* Icon */}
@@ -280,7 +280,7 @@ const FeatureCard = ({ feature, index, theme }) => {
           transition={{
             duration: 2,
             repeat: Infinity,
-            delay: index * 0.2
+            delay: index * 0.1
           }}
           className="absolute inset-0 rounded-2xl border-2 border-white/30"
         />
@@ -292,8 +292,8 @@ const FeatureCard = ({ feature, index, theme }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: index * 0.1 + 0.2 }}
-          className={`text-xl lg:text-2xl font-bold mb-4 group-hover:scale-105 transition-transform duration-300 ${
+          transition={{ duration: 0.3, delay: index * 0.05 + 0.1 }}
+          className={`text-xl lg:text-2xl font-bold mb-4 group-hover:scale-105 transition-transform duration-150 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}
         >
@@ -304,7 +304,7 @@ const FeatureCard = ({ feature, index, theme }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
+          transition={{ duration: 0.3, delay: index * 0.05 + 0.15 }}
           className={`text-base leading-relaxed mb-6 ${
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}
@@ -317,7 +317,7 @@ const FeatureCard = ({ feature, index, theme }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: index * 0.1 + 0.4 }}
+          transition={{ duration: 0.3, delay: index * 0.05 + 0.2 }}
           className="space-y-2 mb-6"
         >
           {feature.highlights.map((highlight, i) => (
@@ -326,7 +326,10 @@ const FeatureCard = ({ feature, index, theme }) => {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: index * 0.1 + 0.5 + i * 0.1 }}
+              transition={{
+                duration: 0.2,
+                delay: index * 0.05 + 0.25 + i * 0.05
+              }}
               className="flex items-center gap-2"
             >
               <div
@@ -348,7 +351,7 @@ const FeatureCard = ({ feature, index, theme }) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: index * 0.1 + 0.6 }}
+          transition={{ duration: 0.3, delay: index * 0.05 + 0.3 }}
           className="flex items-center gap-2 group/link cursor-pointer"
         >
           <span
@@ -361,7 +364,7 @@ const FeatureCard = ({ feature, index, theme }) => {
             transition={{ duration: 1.5, repeat: Infinity }}
           >
             <FaArrowRight
-              className={`w-3 h-3 text-current bg-gradient-to-r ${colorClasses.icon} bg-clip-text text-transparent group-hover/link:translate-x-1 transition-transform duration-300`}
+              className={`w-3 h-3 text-current bg-gradient-to-r ${colorClasses.icon} bg-clip-text text-transparent group-hover/link:translate-x-1 transition-transform duration-150`}
             />
           </motion.div>
         </motion.div> */}

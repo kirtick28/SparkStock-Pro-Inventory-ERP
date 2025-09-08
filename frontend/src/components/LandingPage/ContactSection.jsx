@@ -116,7 +116,7 @@ export default function ContactSection() {
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
+        viewport={{ once: true, amount: 0.1 }}
         className="max-w-7xl mx-auto relative z-10"
       >
         <ContactHeader theme={theme} itemVariants={itemVariants} />

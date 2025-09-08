@@ -189,7 +189,9 @@ const HistoryCard = ({ searchTerm, sortOrder }) => {
                   <tbody>
                     {customer.orders.map((order, idx) => (
                       <tr
-                        key={order.id || order._id}
+                        key={`${customer._id}-order-${
+                          order.id || order._id || idx
+                        }`}
                         className={`h-10 ${
                           theme === 'dark'
                             ? idx % 2 === 0

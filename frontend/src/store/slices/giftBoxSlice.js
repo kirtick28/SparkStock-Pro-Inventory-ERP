@@ -5,19 +5,7 @@ import { toast } from 'react-toastify';
 // Async thunks
 export const fetchGiftBoxes = createAsyncThunk(
   'giftBox/fetchGiftBoxes',
-  async (forceRefresh = false, { getState, rejectWithValue }) => {
-    const state = getState();
-    const { lastFetched, cacheTimeout, giftBoxes } = state.giftBox;
-
-    // Check if we have cached data and it's still valid
-    if (!forceRefresh && lastFetched && giftBoxes.length > 0) {
-      const timeSinceLastFetch = Date.now() - lastFetched;
-      if (timeSinceLastFetch < cacheTimeout) {
-        // Return cached data without making API call
-        return giftBoxes;
-      }
-    }
-
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASEURL}/giftbox`,
@@ -144,9 +132,7 @@ const giftBoxSlice = createSlice({
     selectedGiftBox: null,
     isCreating: false,
     isUpdating: false,
-    isDeleting: false,
-    lastFetched: null,
-    cacheTimeout: 5 * 60 * 1000 // 5 minutes cache
+    isDeleting: false
   },
   reducers: {
     addToCart: (state, action) => {
@@ -177,13 +163,6 @@ const giftBoxSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
-    },
-    invalidateCache: (state) => {
-      state.lastFetched = null;
-    },
-    forceRefresh: (state) => {
-      state.lastFetched = null;
-      state.giftBoxes = [];
     }
   },
   extraReducers: (builder) => {
@@ -196,7 +175,6 @@ const giftBoxSlice = createSlice({
       .addCase(fetchGiftBoxes.fulfilled, (state, action) => {
         state.loading = false;
         state.giftBoxes = action.payload;
-        state.lastFetched = Date.now();
       })
       .addCase(fetchGiftBoxes.rejected, (state, action) => {
         state.loading = false;
@@ -275,9 +253,7 @@ export const {
   updateCartQuantity,
   clearCart,
   setSelectedGiftBox,
-  clearError,
-  invalidateCache,
-  forceRefresh
+  clearError
 } = giftBoxSlice.actions;
 
 export default giftBoxSlice.reducer;

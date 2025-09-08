@@ -34,9 +34,9 @@ const Login = () => {
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.6,
+        duration: 0.3,
         when: 'beforeChildren',
-        staggerChildren: 0.1
+        staggerChildren: 0.05
       }
     }
   };
@@ -48,7 +48,7 @@ const Login = () => {
       y: 0,
       scale: 1,
       transition: {
-        duration: 0.7,
+        duration: 0.3,
         ease: 'easeOut'
       }
     }
@@ -60,10 +60,10 @@ const Login = () => {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.8,
+        duration: 0.4,
         ease: 'easeOut',
         when: 'beforeChildren',
-        staggerChildren: 0.1
+        staggerChildren: 0.05
       }
     }
   };
@@ -74,10 +74,10 @@ const Login = () => {
       opacity: 1,
       x: 0,
       transition: {
-        duration: 0.8,
+        duration: 0.4,
         ease: 'easeOut',
         when: 'beforeChildren',
-        staggerChildren: 0.15
+        staggerChildren: 0.075
       }
     }
   };
@@ -88,7 +88,7 @@ const Login = () => {
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.5,
+        duration: 0.25,
         ease: 'easeOut'
       }
     }
@@ -159,7 +159,7 @@ const Login = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className={`min-h-screen w-full flex flex-col transition-all duration-500 ${
+      className={`min-h-screen w-full flex flex-col transition-all duration-300 ${
         theme === 'dark'
           ? 'bg-gradient-to-br from-slate-900 via-gray-900 to-zinc-900'
           : 'bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50'
@@ -168,7 +168,7 @@ const Login = () => {
       <motion.div
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
         className="relative z-20"
       >
         <SharedHeader variant="transparent" />
@@ -179,7 +179,7 @@ const Login = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
             className={`absolute inset-0 ${
               theme === 'dark'
                 ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_50%)]'
@@ -190,7 +190,7 @@ const Login = () => {
         <div className="relative z-10 w-full max-w-7xl mx-auto">
           <motion.div
             variants={cardVariants}
-            className={`w-full grid grid-cols-1 lg:grid-cols-2 rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 backdrop-blur-sm ${
+            className={`w-full grid grid-cols-1 lg:grid-cols-2 rounded-3xl shadow-2xl overflow-hidden transition-all duration-300 backdrop-blur-sm ${
               theme === 'dark'
                 ? 'bg-gray-800/95 border border-gray-700/50 shadow-black/50'
                 : 'bg-white/95 border border-gray-200/50 shadow-gray-900/10'
@@ -209,7 +209,7 @@ const Login = () => {
                     variants={formElementVariants}
                     whileHover={{ scale: 1.05, rotate: 5 }}
                     transition={{ type: 'spring', stiffness: 300 }}
-                    className={`inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mb-4 transition-all duration-300 ${
+                    className={`inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mb-4 transition-all duration-200 ${
                       theme === 'dark'
                         ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25'
                         : 'bg-gradient-to-br from-cyan-400 to-sky-500 shadow-lg shadow-cyan-400/25'

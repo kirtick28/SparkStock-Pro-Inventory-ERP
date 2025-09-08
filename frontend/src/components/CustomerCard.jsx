@@ -49,12 +49,9 @@ export default function CustomerCard({ customer, onEdit, refreshCustomers }) {
       className={`relative rounded-xl p-5 border transition-all duration-200 group overflow-hidden h-full flex flex-col ${
         theme === 'dark'
           ? 'bg-gray-800/80 border-gray-700 hover:bg-gray-800 hover:border-gray-600 hover:shadow-lg hover:shadow-gray-900/50'
-          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-lg hover:shadow-gray-200/50'
+          : 'bg-white border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-lg hover:shadow-gray-200/50'
       }`}
     >
-      {/* Background Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-
       {/* Status Indicator */}
       <div className="absolute top-3 right-3">
         <motion.div
@@ -129,9 +126,9 @@ export default function CustomerCard({ customer, onEdit, refreshCustomers }) {
           <div
             className={`p-2 rounded-lg ${
               theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/80'
-            } group-hover/item:bg-blue-500/10 transition-colors duration-150`}
+            } group-hover/item:bg-gray-500/10 transition-colors duration-150`}
           >
-            <Phone size={14} className="text-blue-500" />
+            <Phone size={14} className="text-gray-500" />
           </div>
           <span className="text-sm font-medium">{customer.phone}</span>
         </motion.div>
@@ -147,9 +144,9 @@ export default function CustomerCard({ customer, onEdit, refreshCustomers }) {
           <div
             className={`p-2 rounded-lg mt-0.5 ${
               theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/80'
-            } group-hover/item:bg-blue-500/10 transition-colors duration-150`}
+            } group-hover/item:bg-gray-500/10 transition-colors duration-150`}
           >
-            <MapPin size={14} className="text-blue-500" />
+            <MapPin size={14} className="text-gray-500" />
           </div>
           <span className="text-sm font-medium leading-relaxed line-clamp-2">
             {customer.address || 'No address provided'}
@@ -167,9 +164,9 @@ export default function CustomerCard({ customer, onEdit, refreshCustomers }) {
           <div
             className={`p-2 rounded-lg ${
               theme === 'dark' ? 'bg-gray-700/50' : 'bg-gray-100/80'
-            } group-hover/item:bg-blue-500/10 transition-colors duration-150`}
+            } group-hover/item:bg-gray-500/10 transition-colors duration-150`}
           >
-            <CalendarDays size={14} className="text-blue-500" />
+            <CalendarDays size={14} className="text-gray-500" />
           </div>
           <span className="text-sm font-medium">
             Joined {formatDate(customer.createdat || customer.createdAt)}
@@ -224,9 +221,6 @@ export default function CustomerCard({ customer, onEdit, refreshCustomers }) {
           <span>{customer.status ? 'Deactivate' : 'Activate'}</span>
         </motion.button>
       </motion.div>
-
-      {/* Hover Effect Border */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-20 transition-opacity duration-200 -z-10" />
     </motion.div>
   );
 }

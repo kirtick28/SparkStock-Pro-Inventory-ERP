@@ -28,7 +28,6 @@ import {
   setSelectedGiftBox
 } from '../../../store/slices/giftBoxSlice';
 import { fetchProducts } from '../../../store/slices/productsSlice';
-import useSmartFetch from '../../../hooks/useSmartFetch';
 import Loader from '../../../components/common/Loader';
 import GiftBoxBuilder from './GiftBoxBuilder';
 import GiftBoxDetails from './GiftBoxDetails';
@@ -39,11 +38,13 @@ const GiftBoxDashboard = () => {
 
   const {
     giftBoxes,
-    loading: reduxLoading,
+    loading: giftBoxLoading,
     error,
     selectedGiftBox,
     isDeleting
   } = useSelector((state) => state.giftBox);
+
+  const { loading: productsLoading } = useSelector((state) => state.products);
 
   const [showBuilder, setShowBuilder] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -55,19 +56,13 @@ const GiftBoxDashboard = () => {
   const [editingGiftBox, setEditingGiftBox] = useState(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Smart fetching with caching
-  const {
-    loading: giftBoxLoading,
-    refresh: refreshGiftBoxes,
-    isDataStale: giftBoxDataStale
-  } = useSmartFetch(fetchGiftBoxes, 'giftBox');
-
-  const { loading: productsLoading, refresh: refreshProducts } = useSmartFetch(
-    fetchProducts,
-    'products'
-  );
-
   const loading = giftBoxLoading || productsLoading;
+
+  // Fetch data on component mount
+  useEffect(() => {
+    dispatch(fetchGiftBoxes());
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   const filteredGiftBoxes = giftBoxes
     .filter((giftBox) => {
@@ -198,8 +193,8 @@ const GiftBoxDashboard = () => {
   };
 
   const handleRefresh = () => {
-    refreshGiftBoxes();
-    refreshProducts();
+    dispatch(fetchGiftBoxes());
+    dispatch(fetchProducts());
   };
 
   const handleBuilderClose = () => {
@@ -247,28 +242,33 @@ const GiftBoxDashboard = () => {
                 </p>
                 <p
                   className={`text-lg md:text-xl font-bold mt-1 ${
-                    theme === 'dark' ? 'text-white' : 'text-gray-900'
+                    theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
                   }`}
                 >
                   {stat.value}
                 </p>
-                <p
-                  className={`text-xs mt-1 ${
+                <span
+                  className={`text-xs font-medium ${
                     stat.change.startsWith('+')
-                      ? 'text-green-600'
-                      : 'text-red-600'
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
                   }`}
                 >
                   {stat.change} from last month
-                </p>
+                </span>
               </div>
               <div
-                className={`p-2 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}
+                className={`p-2 md:p-3 rounded-xl ${
+                  stat.color === 'blue'
+                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                    : stat.color === 'green'
+                    ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                    : stat.color === 'orange'
+                    ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                    : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                }`}
               >
-                <stat.icon
-                  size={18}
-                  className={`text-${stat.color}-600 dark:text-${stat.color}-400`}
-                />
+                <stat.icon size={20} />
               </div>
             </div>
           </motion.div>
@@ -561,225 +561,244 @@ const GiftBoxDashboard = () => {
       </motion.div>
 
       {/* Gift Boxes Grid */}
-      <AnimatePresence>
-        {filteredGiftBoxes.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={`${
-              theme === 'dark'
-                ? 'bg-gray-800/50 border-gray-700'
-                : 'bg-white/70 border-gray-200'
-            } backdrop-blur-sm rounded-xl border p-12 text-center`}
-          >
-            <Gift
-              size={64}
-              className={`mx-auto mb-4 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-400'
-              }`}
-            />
-            <h3
-              className={`text-xl font-semibold mb-2 ${
-                theme === 'dark' ? 'text-gray-200' : 'text-gray-900'
-              }`}
-            >
-              No gift boxes found
-            </h3>
-            <p
-              className={`text-sm mb-6 ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}
-            >
-              {searchTerm || filterStatus !== 'all' || priceRange !== 'all'
-                ? 'No gift boxes match your current filters. Try adjusting your search or filters.'
-                : 'Create your first gift box to get started'}
-            </p>
-            {searchTerm || filterStatus !== 'all' || priceRange !== 'all' ? (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterStatus('all');
-                  setPriceRange('all');
-                }}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg font-medium transition-all duration-200 mr-3"
-              >
-                Clear Filters
-              </motion.button>
-            ) : null}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleCreateNew}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium transition-all duration-200"
-            >
-              Create Gift Box
-            </motion.button>
-          </motion.div>
+      <div className="p-0">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader />
+          </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          >
-            {filteredGiftBoxes.map((giftBox, index) => (
-              <motion.div
-                key={giftBox._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -5 }}
-                className={`${
-                  theme === 'dark'
-                    ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800'
-                    : 'bg-white/70 border-gray-200 hover:bg-white'
-                } backdrop-blur-sm rounded-xl border p-6 hover:shadow-xl transition-all duration-300 group`}
-              >
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
+            >
+              <AnimatePresence>
+                {filteredGiftBoxes.map((giftBox, index) => (
+                  <motion.div
+                    key={giftBox._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ delay: index * 0.02, duration: 0.3 }}
+                    whileHover={{ y: -4 }}
+                    className="group relative"
+                  >
                     <div
-                      className={`w-12 h-12 rounded-xl ${
-                        theme === 'dark' ? 'bg-blue-900/50' : 'bg-blue-100'
-                      } flex items-center justify-center group-hover:scale-110 transition-transform`}
+                      className={`${
+                        theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800'
+                          : 'bg-white/70 border-gray-200 hover:bg-white'
+                      } backdrop-blur-sm rounded-xl border p-6 hover:shadow-xl transition-all duration-300 group h-full`}
                     >
-                      <Gift
-                        size={24}
-                        className="text-blue-600 dark:text-blue-400"
-                      />
-                    </div>
-                    <div>
-                      <h3
-                        className={`font-semibold text-lg truncate ${
-                          theme === 'dark' ? 'text-white' : 'text-gray-900'
-                        }`}
-                      >
-                        {giftBox.name}
-                      </h3>
-                      <p
-                        className={`text-sm ${
-                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                        }`}
-                      >
-                        {giftBox.products?.length || 0} items
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleToggleStatus(giftBox)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        giftBox.status
-                          ? 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20'
-                          : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <Power size={16} />
-                    </motion.button>
-                  </div>
-                </div>
-
-                {/* Price and Items */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`text-2xl font-bold ${
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
-                      }`}
-                    >
-                      ₹
-                      {(
-                        giftBox.grandtotal ||
-                        giftBox.total ||
-                        0
-                      ).toLocaleString()}
-                    </span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        giftBox.status
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {giftBox.status ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-
-                  {giftBox.products && giftBox.products.length > 0 && (
-                    <div className="flex -space-x-2 mb-3">
-                      {giftBox.products.slice(0, 3).map((product, idx) => (
-                        <div
-                          key={idx}
-                          className={`w-8 h-8 rounded-full ${
-                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
-                          } flex items-center justify-center border-2 border-white dark:border-gray-800`}
-                        >
-                          <Package
-                            size={14}
-                            className={
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-12 h-12 rounded-xl ${
                               theme === 'dark'
-                                ? 'text-gray-400'
-                                : 'text-gray-500'
-                            }
-                          />
+                                ? 'bg-blue-900/50'
+                                : 'bg-blue-100'
+                            } flex items-center justify-center group-hover:scale-110 transition-transform`}
+                          >
+                            <Gift
+                              size={24}
+                              className="text-blue-600 dark:text-blue-400"
+                            />
+                          </div>
+                          <div>
+                            <h3
+                              className={`font-semibold text-lg truncate ${
+                                theme === 'dark'
+                                  ? 'text-white'
+                                  : 'text-gray-900'
+                              }`}
+                            >
+                              {giftBox.name}
+                            </h3>
+                            <p
+                              className={`text-sm ${
+                                theme === 'dark'
+                                  ? 'text-gray-400'
+                                  : 'text-gray-500'
+                              }`}
+                            >
+                              {giftBox.products?.length || 0} items
+                            </p>
+                          </div>
                         </div>
-                      ))}
-                      {giftBox.products.length > 3 && (
-                        <div
-                          className={`w-8 h-8 rounded-full ${
-                            theme === 'dark' ? 'bg-gray-600' : 'bg-gray-300'
-                          } flex items-center justify-center border-2 border-white dark:border-gray-800 text-xs font-medium`}
+
+                        <div className="flex items-center gap-1">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleToggleStatus(giftBox)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              giftBox.status
+                                ? 'text-green-600 hover:bg-green-100 dark:hover:bg-green-900/20'
+                                : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            <Power size={16} />
+                          </motion.button>
+                        </div>
+                      </div>
+
+                      {/* Price and Items */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span
+                            className={`text-2xl font-bold ${
+                              theme === 'dark' ? 'text-white' : 'text-gray-900'
+                            }`}
+                          >
+                            ₹
+                            {(
+                              giftBox.grandtotal ||
+                              giftBox.total ||
+                              0
+                            ).toLocaleString()}
+                          </span>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              giftBox.status
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {giftBox.status ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        {giftBox.products && giftBox.products.length > 0 && (
+                          <div className="flex -space-x-2 mb-3">
+                            {giftBox.products
+                              .slice(0, 3)
+                              .map((product, idx) => (
+                                <div
+                                  key={`${giftBox._id}-product-${
+                                    product._id || product.id || idx
+                                  }`}
+                                  className={`w-8 h-8 rounded-full ${
+                                    theme === 'dark'
+                                      ? 'bg-gray-700'
+                                      : 'bg-gray-200'
+                                  } flex items-center justify-center border-2 border-white dark:border-gray-800`}
+                                >
+                                  <Package
+                                    size={14}
+                                    className={
+                                      theme === 'dark'
+                                        ? 'text-gray-400'
+                                        : 'text-gray-500'
+                                    }
+                                  />
+                                </div>
+                              ))}
+                            {giftBox.products.length > 3 && (
+                              <div
+                                className={`w-8 h-8 rounded-full ${
+                                  theme === 'dark'
+                                    ? 'bg-gray-600'
+                                    : 'bg-gray-300'
+                                } flex items-center justify-center border-2 border-white dark:border-gray-800 text-xs font-medium`}
+                              >
+                                +{giftBox.products.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleViewDetails(giftBox)}
+                          className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center gap-1"
                         >
-                          +{giftBox.products.length - 3}
-                        </div>
-                      )}
+                          <Eye size={14} />
+                          View
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleEdit(giftBox)}
+                          className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center gap-1"
+                        >
+                          <Edit3 size={14} />
+                          Edit
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleDelete(giftBox._id)}
+                          disabled={isDeleting}
+                          className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                        </motion.button>
+                      </div>
                     </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {filteredGiftBoxes.length === 0 && !loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={`text-center py-12 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700/30 border-gray-600'
+                    : 'bg-gray-50 border-gray-300'
+                } rounded-xl border border-dashed mt-6`}
+              >
+                <Gift
+                  size={48}
+                  className={`mx-auto mb-4 ${
+                    theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                  }`}
+                />
+                <p
+                  className={`text-lg font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  No gift boxes found
+                </p>
+                <p
+                  className={`text-sm ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  {searchTerm || filterStatus !== 'all' || priceRange !== 'all'
+                    ? 'Try adjusting your search criteria'
+                    : 'Get started by creating your first gift box'}
+                </p>
+                {!searchTerm &&
+                  filterStatus === 'all' &&
+                  priceRange === 'all' && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleCreateNew}
+                      className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+                    >
+                      <Plus size={16} className="inline mr-1.5" />
+                      Create First Gift Box
+                    </motion.button>
                   )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleViewDetails(giftBox)}
-                    className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center gap-1"
-                  >
-                    <Eye size={14} />
-                    View
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleEdit(giftBox)}
-                    className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center gap-1"
-                  >
-                    <Edit3 size={14} />
-                    Edit
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleDelete(giftBox._id)}
-                    disabled={isDeleting}
-                    className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50"
-                  >
-                    <Trash2 size={14} />
-                  </motion.button>
-                </div>
               </motion.div>
-            ))}
-          </motion.div>
+            )}
+          </>
         )}
-      </AnimatePresence>
+      </div>
 
       {/* Modals */}
       <AnimatePresence>

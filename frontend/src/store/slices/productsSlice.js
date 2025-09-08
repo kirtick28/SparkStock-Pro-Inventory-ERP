@@ -5,19 +5,7 @@ import { toast } from 'react-toastify';
 // Async thunks
 export const fetchProducts = createAsyncThunk(
   'products/fetchProducts',
-  async (forceRefresh = false, { getState, rejectWithValue }) => {
-    const state = getState();
-    const { lastFetched, cacheTimeout, products } = state.products;
-
-    // Check if we have cached data and it's still valid
-    if (!forceRefresh && lastFetched && products.length > 0) {
-      const timeSinceLastFetch = Date.now() - lastFetched;
-      if (timeSinceLastFetch < cacheTimeout) {
-        // Return cached data without making API call
-        return products;
-      }
-    }
-
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASEURL}/product/active`,
@@ -39,19 +27,7 @@ export const fetchProducts = createAsyncThunk(
 
 export const fetchAllProducts = createAsyncThunk(
   'products/fetchAllProducts',
-  async (forceRefresh = false, { getState, rejectWithValue }) => {
-    const state = getState();
-    const { lastFetched, cacheTimeout, allProducts } = state.products;
-
-    // Check if we have cached data and it's still valid
-    if (!forceRefresh && lastFetched && allProducts.length > 0) {
-      const timeSinceLastFetch = Date.now() - lastFetched;
-      if (timeSinceLastFetch < cacheTimeout) {
-        // Return cached data without making API call
-        return allProducts;
-      }
-    }
-
+  async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASEURL}/product/`,
@@ -79,9 +55,7 @@ const productsSlice = createSlice({
     loading: false,
     error: null,
     searchTerm: '',
-    filteredProducts: [],
-    lastFetched: null,
-    cacheTimeout: 5 * 60 * 1000 // 5 minutes cache
+    filteredProducts: []
   },
   reducers: {
     setSearchTerm: (state, action) => {
@@ -96,14 +70,6 @@ const productsSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
-    },
-    invalidateCache: (state) => {
-      state.lastFetched = null;
-    },
-    forceRefresh: (state) => {
-      state.lastFetched = null;
-      state.products = [];
-      state.allProducts = [];
     }
   },
   extraReducers: (builder) => {
@@ -117,7 +83,6 @@ const productsSlice = createSlice({
         state.loading = false;
         state.products = action.payload;
         state.filteredProducts = action.payload;
-        state.lastFetched = Date.now();
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
@@ -132,7 +97,6 @@ const productsSlice = createSlice({
       .addCase(fetchAllProducts.fulfilled, (state, action) => {
         state.loading = false;
         state.allProducts = action.payload;
-        state.lastFetched = Date.now();
       })
       .addCase(fetchAllProducts.rejected, (state, action) => {
         state.loading = false;
@@ -141,12 +105,6 @@ const productsSlice = createSlice({
   }
 });
 
-export const {
-  setSearchTerm,
-  clearSearch,
-  clearError,
-  invalidateCache,
-  forceRefresh
-} = productsSlice.actions;
+export const { setSearchTerm, clearSearch, clearError } = productsSlice.actions;
 
 export default productsSlice.reducer;

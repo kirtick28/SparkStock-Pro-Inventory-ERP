@@ -23,9 +23,9 @@ export default function HeroSection() {
     visible: {
       opacity: 1,
       transition: {
-        duration: 0.6,
+        duration: 0.3,
         when: 'beforeChildren',
-        staggerChildren: 0.2
+        staggerChildren: 0.1
       }
     }
   };
@@ -35,7 +35,7 @@ export default function HeroSection() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: 'easeOut' }
+      transition: { duration: 0.3, ease: 'easeOut' }
     }
   };
 
@@ -118,7 +118,7 @@ const HeroContent = ({ navigate, theme, itemVariants }) => (
     <motion.div
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
       className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${
         theme === 'dark'
           ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-300'
@@ -153,7 +153,7 @@ const HeroContent = ({ navigate, theme, itemVariants }) => (
         className="block bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 bg-clip-text text-transparent"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
       >
         Inventory & Billing
       </motion.span>
@@ -161,7 +161,7 @@ const HeroContent = ({ navigate, theme, itemVariants }) => (
         className={`block ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.7 }}
+        transition={{ duration: 0.3, delay: 0.3 }}
       >
         Management
       </motion.span>
@@ -196,7 +196,7 @@ const HeroContent = ({ navigate, theme, itemVariants }) => (
           key={index}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.9 + index * 0.1 }}
+          transition={{ duration: 0.3, delay: 0.4 + index * 0.05 }}
           whileHover={{ scale: 1.05, y: -2 }}
           className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium ${
             theme === 'dark'
@@ -291,14 +291,14 @@ const HeroImage = ({ theme, itemVariants, floatingVariants }) => (
             }}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
           />
 
           {/* Overlay gradient */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
+            transition={{ duration: 0.5, delay: 0.25 }}
             className={`absolute inset-0 rounded-3xl ${
               theme === 'dark'
                 ? 'bg-gradient-to-t from-gray-900/20 via-transparent to-blue-500/10'
@@ -310,23 +310,23 @@ const HeroImage = ({ theme, itemVariants, floatingVariants }) => (
 
       {/* Floating Icons */}
       {[
-        { icon: FaBox, position: 'top-4 -left-4', delay: 0.8, color: 'blue' },
+        { icon: FaBox, position: 'top-4 -left-4', delay: 0.4, color: 'blue' },
         {
           icon: FaChartLine,
           position: 'top-8 -right-6',
-          delay: 1.2,
+          delay: 0.5,
           color: 'purple'
         },
         {
           icon: FaUsers,
           position: 'bottom-8 -left-6',
-          delay: 1.6,
+          delay: 0.6,
           color: 'cyan'
         },
         {
           icon: FaCog,
           position: 'bottom-4 -right-4',
-          delay: 2.0,
+          delay: 0.7,
           color: 'pink'
         }
       ].map((item, index) => (
@@ -335,7 +335,7 @@ const HeroImage = ({ theme, itemVariants, floatingVariants }) => (
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{
-            duration: 0.5,
+            duration: 0.3,
             delay: item.delay,
             type: 'spring',
             stiffness: 200
