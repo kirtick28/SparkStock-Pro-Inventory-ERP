@@ -1,0 +1,11 @@
+# Sample Excel file for testing product upload
+# Create this manually with the following columns:
+# Column A: name
+# Column B: price  
+# Column C: stockavailable
+
+# Example data:
+# Row 1: name, price, stockavailable (headers)
+# Row 2: Test Product 1, 100, 50
+# Row 3: Test Product 2, 200, 25
+# Row 4: Test Product 3, 150, 75

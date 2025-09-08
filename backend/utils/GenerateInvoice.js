@@ -1,30 +1,94 @@
 const puppeteer = require('puppeteer');
 
+// Cache browser instance for better performance
+let browserInstance = null;
+
+const getBrowser = async () => {
+  if (!browserInstance) {
+    browserInstance = await puppeteer.launch({
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-extensions'
+      ]
+    });
+  }
+  return browserInstance;
+};
+
 const generatePDF = async (pdfParams) => {
+  let page = null;
+
   try {
     const company = pdfParams.companyDetails || {};
     const customer = pdfParams.customerDetails || {};
     const order = pdfParams.orderDetails || {};
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.setContent(generateHTML(company, customer, order), {
-      waitUntil: 'networkidle0'
+
+    const browser = await getBrowser();
+    page = await browser.newPage();
+
+    // Optimize page settings for faster rendering
+    await page.setViewport({ width: 1200, height: 800 });
+    await page.setDefaultNavigationTimeout(10000);
+    await page.setDefaultTimeout(10000);
+
+    // Disable images and CSS for faster loading
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      if (
+        request.resourceType() === 'image' ||
+        request.resourceType() === 'stylesheet'
+      ) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+
+    const htmlContent = generateHTML(company, customer, order);
+
+    await page.setContent(htmlContent, {
+      waitUntil: 'domcontentloaded', // Changed from 'networkidle0' for faster generation
+      timeout: 10000
     });
 
     await page.pdf({
       path: `invoice.pdf`,
       format: 'A4',
       printBackground: true,
-      margin: { top: '30px', bottom: '30px', left: '20px', right: '20px' }
+      margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
+      preferCSSPageSize: true
     });
 
     console.log('PDF generated successfully!');
-    await browser.close();
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error(`Failed to generate PDF: ${error.message}`);
+  } finally {
+    if (page) {
+      await page.close();
+    }
   }
 };
+
+// Graceful shutdown function
+const closeBrowser = async () => {
+  if (browserInstance) {
+    await browserInstance.close();
+    browserInstance = null;
+  }
+};
+
+// Handle process termination
+process.on('SIGINT', closeBrowser);
+process.on('SIGTERM', closeBrowser);
+process.on('exit', closeBrowser);
 
 const generateHTML = (company, customer, order) => {
   let s_no = 1;

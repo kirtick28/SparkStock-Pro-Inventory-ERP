@@ -8,8 +8,19 @@ const orderSchema = new mongoose.Schema({
   },
   customer: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    required: false, // Make customer optional for walk-in customers
     ref: 'Customer'
+  },
+  customerInfo: {
+    type: {
+      name: { type: String, required: true },
+      phone: { type: String },
+      address: { type: String },
+      city: { type: String },
+      state: { type: String },
+      pincode: { type: String }
+    },
+    required: false // Used for walk-in customers when customer field is null
   },
   cartitems: [
     {

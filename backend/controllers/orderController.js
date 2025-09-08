@@ -12,196 +12,415 @@ const mongoose = require('mongoose');
 const fs = require('fs').promises;
 
 exports.placeOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const { id, products, giftboxes, discount, total, grandtotal, gst } =
-      req.body;
-    if (
-      !id ||
-      !products ||
-      !Array.isArray(products) ||
-      !discount ||
-      !total ||
-      !grandtotal ||
-      !gst
-    ) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    const {
+      id,
+      products,
+      giftboxes,
+      discount,
+      total,
+      grandtotal,
+      gst,
+      customerInfo
+    } = req.body;
+
+    // Enhanced validation
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      if (!giftboxes || !Array.isArray(giftboxes) || giftboxes.length === 0) {
+        return res
+          .status(400)
+          .json({ message: 'At least one product or gift box is required' });
+      }
     }
 
-    const gstAmount = gst.amount ? parseFloat(gst.amount) : null;
+    if (
+      discount === undefined ||
+      total === undefined ||
+      grandtotal === undefined ||
+      !gst
+    ) {
+      return res
+        .status(400)
+        .json({
+          message: 'Missing required fields: discount, total, grandtotal, gst'
+        });
+    }
+
+    // Validate numeric values
+    const discountNum = parseFloat(discount);
+    const totalNum = parseFloat(total);
+    const grandtotalNum = parseFloat(grandtotal);
+
+    if (isNaN(discountNum) || isNaN(totalNum) || isNaN(grandtotalNum)) {
+      return res
+        .status(400)
+        .json({
+          message: 'Invalid numeric values for discount, total, or grandtotal'
+        });
+    }
+
+    if (discountNum < 0 || totalNum < 0 || grandtotalNum < 0) {
+      return res
+        .status(400)
+        .json({
+          message: 'Discount, total, and grandtotal must be non-negative'
+        });
+    }
+
+    const gstAmount = gst.amount ? parseFloat(gst.amount) : 0;
     if (gst.status && (isNaN(gstAmount) || gstAmount < 0)) {
       return res.status(400).json({ message: 'Invalid GST amount' });
     }
 
-    const company = await Company.findOne({ admin: req.user.id });
+    // Get company details
+    const company = await Company.findOne({ admin: req.user.id }).session(
+      session
+    );
     if (!company) {
+      await session.abortTransaction();
       return res.status(404).json({ message: 'Company details not found' });
     }
+
     // Add company status check
     if (req.user.role !== 'superadmin' && !company.status) {
-      return res
-        .status(403)
-        .json({ message: 'Company is not active. Please contact support.' });
-    }
-
-    const customer = await Customer.findById(id);
-    if (!customer) {
-      return res.status(404).json({ message: 'Customer not found' });
-    }
-
-    const cartItems = [];
-
-    for (const item of products) {
-      const { productId, quantity } = item;
-      if (!productId || !quantity || quantity < 1) {
-        return res
-          .status(400)
-          .json({ message: `Invalid product data: ${JSON.stringify(item)}` });
-      }
-
-      const product = await Product.findById(productId);
-      if (!product) {
-        return res
-          .status(404)
-          .json({ message: `Product not found: ${productId}` });
-      }
-
-      if (product.stockavailable < quantity) {
-        return res
-          .status(400)
-          .json({ message: `Insufficient stock for product: ${product.name}` });
-      }
-
-      const itemTotal = quantity * product.price;
-      product.stockavailable -= quantity;
-      product.totalsales += quantity;
-      product.totalrevenue += itemTotal;
-      await product.save();
-
-      cartItems.push({
-        id: product._id,
-        name: product.name,
-        unitprice: product.price,
-        quantity: quantity,
-        total: itemTotal,
-        type: 'product'
+      await session.abortTransaction();
+      return res.status(403).json({
+        message: 'Company is not active. Please contact support.'
       });
     }
 
-    if (giftboxes && Array.isArray(giftboxes)) {
-      for (const box of giftboxes) {
-        const { giftBoxId, quantity } = box;
-        if (!giftBoxId || !quantity || quantity < 1) {
-          return res
-            .status(400)
-            .json({ message: `Invalid gift box data: ${JSON.stringify(box)}` });
-        }
+    let customer = null;
+    let customerData = null;
 
-        const giftBox = await GiftBox.findById(giftBoxId);
-        if (!giftBox) {
-          return res
-            .status(404)
-            .json({ message: `GiftBox not found: ${giftBoxId}` });
-        }
+    // Handle customer - either existing customer ID or new customer info
+    if (id) {
+      customer = await Customer.findById(id).session(session);
+      if (!customer) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      customerData = customer;
+    } else if (customerInfo && customerInfo.name && customerInfo.name.trim()) {
+      // Validate customer info
+      customerData = {
+        name: customerInfo.name.trim(),
+        phone: customerInfo.phone?.trim() || '',
+        address: customerInfo.address?.trim() || '',
+        city: customerInfo.city?.trim() || '',
+        state: customerInfo.state?.trim() || '',
+        pincode: customerInfo.pincode?.trim() || ''
+      };
+    } else {
+      // Default walk-in customer
+      customerData = {
+        name: 'Walk-in Customer',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: ''
+      };
+    }
 
-        if (giftBox.stockavailable < quantity) {
+    const cartItems = [];
+    const bulkProductUpdates = [];
+    const bulkGiftBoxUpdates = [];
+
+    // Process products with bulk operations
+    if (products && Array.isArray(products) && products.length > 0) {
+      for (const item of products) {
+        const { productId, quantity } = item;
+
+        if (!productId || !quantity || quantity < 1) {
+          await session.abortTransaction();
           return res.status(400).json({
-            message: `Insufficient stock for gift box: ${giftBox.name}`
+            message: `Invalid product data: productId and quantity are required`
           });
         }
 
-        const boxTotal = quantity * giftBox.grandtotal;
-        giftBox.stockavailable -= quantity;
-        giftBox.totalsales += quantity;
-        giftBox.totalrevenue += boxTotal;
-        await giftBox.save();
+        const quantityNum = parseInt(quantity);
+        if (isNaN(quantityNum) || quantityNum < 1) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            message: `Invalid quantity for product: ${productId}`
+          });
+        }
+
+        const product = await Product.findById(productId).session(session);
+        if (!product) {
+          await session.abortTransaction();
+          return res.status(404).json({
+            message: `Product not found: ${productId}`
+          });
+        }
+
+        if (product.stockavailable < quantityNum) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            message: `Insufficient stock for product: ${product.name}. Available: ${product.stockavailable}, Requested: ${quantityNum}`
+          });
+        }
+
+        const itemTotal = quantityNum * product.price;
+
+        // Prepare bulk update
+        bulkProductUpdates.push({
+          updateOne: {
+            filter: { _id: productId },
+            update: {
+              $inc: {
+                stockavailable: -quantityNum,
+                totalsales: quantityNum,
+                totalrevenue: itemTotal
+              }
+            }
+          }
+        });
+
+        cartItems.push({
+          id: product._id,
+          name: product.name,
+          unitprice: product.price,
+          quantity: quantityNum,
+          total: itemTotal,
+          type: 'product'
+        });
+      }
+    }
+
+    // Process gift boxes with bulk operations
+    if (giftboxes && Array.isArray(giftboxes) && giftboxes.length > 0) {
+      for (const box of giftboxes) {
+        const { giftBoxId, quantity } = box;
+
+        if (!giftBoxId || !quantity || quantity < 1) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            message: `Invalid gift box data: giftBoxId and quantity are required`
+          });
+        }
+
+        const quantityNum = parseInt(quantity);
+        if (isNaN(quantityNum) || quantityNum < 1) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            message: `Invalid quantity for gift box: ${giftBoxId}`
+          });
+        }
+
+        const giftBox = await GiftBox.findById(giftBoxId).session(session);
+        if (!giftBox) {
+          await session.abortTransaction();
+          return res.status(404).json({
+            message: `GiftBox not found: ${giftBoxId}`
+          });
+        }
+
+        if (giftBox.stockavailable < quantityNum) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            message: `Insufficient stock for gift box: ${giftBox.name}. Available: ${giftBox.stockavailable}, Requested: ${quantityNum}`
+          });
+        }
+
+        const boxTotal = quantityNum * giftBox.grandtotal;
+
+        // Prepare bulk update
+        bulkGiftBoxUpdates.push({
+          updateOne: {
+            filter: { _id: giftBoxId },
+            update: {
+              $inc: {
+                stockavailable: -quantityNum,
+                totalsales: quantityNum,
+                totalrevenue: boxTotal
+              }
+            }
+          }
+        });
 
         cartItems.push({
           id: giftBox._id,
           name: giftBox.name,
           unitprice: giftBox.grandtotal,
-          quantity: quantity,
+          quantity: quantityNum,
           total: boxTotal,
           type: 'giftbox'
         });
       }
     }
 
+    // Execute bulk updates
+    if (bulkProductUpdates.length > 0) {
+      await Product.bulkWrite(bulkProductUpdates, { session });
+    }
+    if (bulkGiftBoxUpdates.length > 0) {
+      await GiftBox.bulkWrite(bulkGiftBoxUpdates, { session });
+    }
+
+    // Create order
     const order = new Order({
       companyId: company._id,
-      customer: customer._id,
-      cartitems: products.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity
-      })),
+      customer: customer ? customer._id : null,
+      cartitems: products
+        ? products.map((item) => ({
+            productId: item.productId,
+            quantity: parseInt(item.quantity)
+          }))
+        : [],
       giftboxes: giftboxes
         ? giftboxes.map((box) => ({
             giftBoxId: box.giftBoxId,
-            quantity: box.quantity
+            quantity: parseInt(box.quantity)
           }))
         : [],
-      discount,
-      total,
-      grandtotal,
+      discount: discountNum,
+      total: totalNum,
+      grandtotal: grandtotalNum,
       gst: {
         status: gst.status,
-        percentage: gst.status ? gst.percentage : null,
-        amount: gst.status ? gstAmount : null
-      }
+        percentage: gst.status ? parseFloat(gst.percentage) || 0 : 0,
+        amount: gst.status ? gstAmount : 0
+      },
+      customerInfo: customer ? null : customerData
     });
 
-    const savedOrder = await order.save();
+    const savedOrder = await order.save({ session });
 
-    customer.orders.push({ id: savedOrder._id });
-    await customer.save();
+    // Update customer orders if it's a registered customer
+    if (customer) {
+      await Customer.findByIdAndUpdate(
+        customer._id,
+        { $push: { orders: { id: savedOrder._id } } },
+        { session }
+      );
+    }
+
+    // Commit transaction before PDF generation
+    await session.commitTransaction();
 
     const orderDetails = {
       cartitems: cartItems,
-      discount: order.discount,
-      total: order.total,
-      grandtotal: order.grandtotal,
-      gst: order.gst,
-      createdat: order.createdat
+      discount: savedOrder.discount,
+      total: savedOrder.total,
+      grandtotal: savedOrder.grandtotal,
+      gst: savedOrder.gst,
+      createdat: savedOrder.createdat
     };
 
     const pdfParams = {
       companyDetails: company,
-      customerDetails: customer,
+      customerDetails: customerData,
       orderDetails
     };
 
-    try {
-      await generatePDF(pdfParams);
-      const url = await uploadPDFToCloudinary(
-        './invoice.pdf',
-        company.companyname,
-        customer.name
+    // Generate PDF asynchronously to improve response time
+    const pdfPromise = generateAndUploadPDF(
+      pdfParams,
+      company,
+      customerData,
+      savedOrder._id
+    );
+
+    // Delete cart if it's for an existing customer
+    if (id) {
+      Cart.deleteOne({ id }).catch((err) =>
+        console.error('Error deleting cart:', err)
       );
-
-      savedOrder.invoicepdf = url;
-      await savedOrder.save();
-
-      await fs
-        .unlink('./invoice.pdf')
-        .catch((err) => console.error('Error deleting invoice.pdf:', err));
-
-      await Cart.deleteOne({ id });
-
-      res.status(200).json({
-        message: 'Order placed successfully and PDF generated',
-        invoiceurl: savedOrder.invoicepdf
-      });
-    } catch (error) {
-      console.error('PDF Error:', error);
-      return res.status(500).json({
-        message: 'Failed to generate or upload the invoice PDF',
-        error: error.message
-      });
     }
+
+    // Start PDF generation but don't wait for it
+    pdfPromise
+      .then((pdfUrl) => {
+        // PDF generated successfully, update order with URL
+        Order.findByIdAndUpdate(savedOrder._id, { invoicepdf: pdfUrl }).catch(
+          (err) => console.error('Error updating order with PDF URL:', err)
+        );
+      })
+      .catch((err) => {
+        console.error('PDF generation failed:', err);
+      });
+
+    res.status(200).json({
+      message: 'Order placed successfully. Invoice is being generated.',
+      orderId: savedOrder._id,
+      pdfUrl: null // Will be available shortly
+    });
   } catch (error) {
     console.error('Error placing order:', error);
-    res
-      .status(500)
-      .json({ message: 'Error placing order', error: error.message });
+    await session.abortTransaction();
+    res.status(500).json({
+      message: 'Error placing order',
+      error: error.message
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Separate function for PDF generation and upload
+const generateAndUploadPDF = async (
+  pdfParams,
+  company,
+  customerData,
+  orderId
+) => {
+  try {
+    await generatePDF(pdfParams);
+    const url = await uploadPDFToCloudinary(
+      './invoice.pdf',
+      company.companyname,
+      customerData.name
+    );
+
+    // Clean up the temporary PDF file
+    await fs
+      .unlink('./invoice.pdf')
+      .catch((err) => console.error('Error deleting invoice.pdf:', err));
+
+    return url;
+  } catch (error) {
+    console.error('PDF generation/upload error:', error);
+    throw error;
+  }
+};
+
+// Get order status and PDF URL
+exports.getOrderStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID is required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if the order belongs to the user's company
+    const company = await Company.findOne({ admin: req.user.id });
+    if (!company || !order.companyId.equals(company._id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    res.status(200).json({
+      orderId: order._id,
+      status: order.invoicepdf ? 'completed' : 'processing',
+      pdfUrl: order.invoicepdf || null,
+      createdAt: order.createdat,
+      grandTotal: order.grandtotal
+    });
+  } catch (error) {
+    console.error('Error getting order status:', error);
+    res.status(500).json({
+      message: 'Error getting order status',
+      error: error.message
+    });
   }
 };
 

@@ -100,6 +100,10 @@ const GiftBoxDashboard = () => {
           aValue = a.products?.length || 0;
           bValue = b.products?.length || 0;
           break;
+        case 'stock':
+          aValue = a.stockavailable || 0;
+          bValue = b.stockavailable || 0;
+          break;
         case 'created':
           aValue = new Date(a.createdat || 0);
           bValue = new Date(b.createdat || 0);
@@ -371,6 +375,7 @@ const GiftBoxDashboard = () => {
                 <option value="name">Name</option>
                 <option value="price">Price</option>
                 <option value="items">Items Count</option>
+                <option value="stock">Stock Available</option>
                 <option value="created">Created Date</option>
               </select>
 
@@ -645,7 +650,7 @@ const GiftBoxDashboard = () => {
                         </div>
                       </div>
 
-                      {/* Price and Items */}
+                      {/* Price and Stock Info */}
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
                           <span
@@ -668,6 +673,44 @@ const GiftBoxDashboard = () => {
                             }`}
                           >
                             {giftBox.status ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+
+                        {/* Stock Information */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Box
+                              size={16}
+                              className={
+                                theme === 'dark'
+                                  ? 'text-gray-400'
+                                  : 'text-gray-500'
+                              }
+                            />
+                            <span
+                              className={`text-sm font-medium ${
+                                theme === 'dark'
+                                  ? 'text-gray-300'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              Stock: {giftBox.stockavailable || 0}
+                            </span>
+                          </div>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              (giftBox.stockavailable || 0) > 10
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : (giftBox.stockavailable || 0) > 0
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                            }`}
+                          >
+                            {(giftBox.stockavailable || 0) > 10
+                              ? 'In Stock'
+                              : (giftBox.stockavailable || 0) > 0
+                              ? 'Low Stock'
+                              : 'Out of Stock'}
                           </span>
                         </div>
 

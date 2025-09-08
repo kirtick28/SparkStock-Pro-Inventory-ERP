@@ -282,6 +282,7 @@ exports.createBulkProducts = async (req, res) => {
   }
 
   try {
+    // Check company status
     if (req.user && req.user.companyId && req.user.role !== 'superadmin') {
       const currentCompany = await Company.findById(req.user.companyId);
       if (!currentCompany) {
@@ -303,45 +304,158 @@ exports.createBulkProducts = async (req, res) => {
         .status(403)
         .json({ message: 'User not associated with a company.' });
     }
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const productsData = XLSX.utils.sheet_to_json(sheet);
 
-    const products = productsData.map((row) => {
-      const normalizedRow = Object.keys(row).reduce((acc, key) => {
-        acc[key.toLowerCase()] = row[key];
-        return acc;
-      }, {});
+    // Validate file type
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel'
+    ];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        message:
+          'Invalid file type. Please upload an Excel file (.xlsx or .xls)'
+      });
+    }
 
-      const { name, price, stockavailable } = normalizedRow;
-
-      if (!name || !price || !stockavailable) {
-        throw new Error('Missing required fields in Excel file');
+    // Parse Excel file
+    let workbook, sheet, productsData;
+    try {
+      workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        return res.status(400).json({ message: 'Excel file has no sheets' });
       }
+      sheet = workbook.Sheets[workbook.SheetNames[0]];
+      productsData = XLSX.utils.sheet_to_json(sheet);
+    } catch (parseError) {
+      console.error('Excel parsing error:', parseError);
+      return res.status(400).json({
+        message:
+          'Invalid Excel file format. Please check your file and try again.'
+      });
+    }
 
-      const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    if (!productsData || productsData.length === 0) {
+      return res.status(400).json({
+        message: 'Excel file is empty or has no data rows'
+      });
+    }
 
-      return {
-        companyId: req.user.companyId,
-        image: randomEmoji,
-        name,
-        price,
-        stockavailable
-      };
-    });
+    // Validate and process products
+    const validProducts = [];
+    const errors = [];
+    const companyId = req.user.companyId;
 
-    const createdProducts = await Product.insertMany(products);
+    for (let i = 0; i < productsData.length; i++) {
+      try {
+        const row = productsData[i];
+        const rowNumber = i + 2; // +2 because Excel rows start at 1 and we skip header
+
+        // Normalize column names (case insensitive)
+        const normalizedRow = Object.keys(row).reduce((acc, key) => {
+          acc[key.toLowerCase().trim()] = row[key];
+          return acc;
+        }, {});
+
+        const { name, price, stockavailable } = normalizedRow;
+
+        // Validate required fields
+        if (!name || name.toString().trim() === '') {
+          errors.push(`Row ${rowNumber}: Product name is required`);
+          continue;
+        }
+
+        if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+          errors.push(
+            `Row ${rowNumber}: Valid price is required (must be a positive number)`
+          );
+          continue;
+        }
+
+        if (
+          !stockavailable ||
+          isNaN(parseInt(stockavailable)) ||
+          parseInt(stockavailable) < 0
+        ) {
+          errors.push(
+            `Row ${rowNumber}: Valid stock quantity is required (must be a non-negative number)`
+          );
+          continue;
+        }
+
+        const productName = name.toString().trim();
+        const productPrice = parseFloat(price);
+        const productStock = parseInt(stockavailable);
+
+        // Check for duplicate names in the same upload
+        const duplicateInUpload = validProducts.find(
+          (p) => p.name.toLowerCase() === productName.toLowerCase()
+        );
+        if (duplicateInUpload) {
+          errors.push(
+            `Row ${rowNumber}: Duplicate product name "${productName}" in upload`
+          );
+          continue;
+        }
+
+        // Check if product already exists in database
+        const existingProduct = await Product.findOne({
+          companyId: companyId,
+          name: { $regex: new RegExp(`^${productName}$`, 'i') }
+        });
+
+        if (existingProduct) {
+          errors.push(
+            `Row ${rowNumber}: Product "${productName}" already exists`
+          );
+          continue;
+        }
+
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+
+        validProducts.push({
+          companyId: companyId,
+          image: randomEmoji,
+          name: productName,
+          price: productPrice,
+          stockavailable: productStock
+        });
+      } catch (rowError) {
+        errors.push(`Row ${i + 2}: ${rowError.message}`);
+      }
+    }
+
+    // If there are errors, return them
+    if (errors.length > 0) {
+      return res.status(400).json({
+        message: 'Validation errors found in Excel file',
+        errors: errors,
+        validProductsCount: validProducts.length,
+        totalRows: productsData.length
+      });
+    }
+
+    // If no valid products, return error
+    if (validProducts.length === 0) {
+      return res.status(400).json({
+        message: 'No valid products found in Excel file'
+      });
+    }
+
+    // Insert products in bulk
+    const createdProducts = await Product.insertMany(validProducts);
 
     res.status(201).json({
-      message: 'Products created successfully',
-      products: createdProducts
+      message: `Successfully imported ${createdProducts.length} products`,
+      products: createdProducts,
+      totalProcessed: productsData.length,
+      successCount: createdProducts.length,
+      errorCount: errors.length
     });
   } catch (error) {
     console.error('Error creating bulk products:', error);
-    const errorMessage =
-      error.message === 'Missing required fields in Excel file'
-        ? error.message
-        : 'Error creating bulk products';
-    res.status(500).json({ message: errorMessage, error: error.message });
+    res.status(500).json({
+      message: 'Error processing Excel file',
+      error: error.message
+    });
   }
 };

@@ -8,7 +8,8 @@ import {
   Package,
   Gift,
   History,
-  Zap
+  Zap,
+  Calculator
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -26,6 +27,7 @@ const roleConfig = {
     { name: 'Inventory', path: '/sub-admin/inventory', icon: Package },
     { name: 'Gift Boxes', path: '/sub-admin/gifts', icon: Gift },
     { name: 'Customers', path: '/sub-admin/customers', icon: Users },
+    { name: 'Billing', path: '/sub-admin/billing', icon: Calculator },
     { name: 'Purchase History', path: '/sub-admin/history', icon: History }
   ]
 };

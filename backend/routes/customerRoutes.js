@@ -21,13 +21,21 @@ router
   );
 
 router
+  .route('/active')
+  .get(
+    authMiddleware,
+    roleMiddleware(['subadmin']),
+    customerController.getAllCustomers
+  );
+
+router
   .route('/')
   .put(
     authMiddleware,
     roleMiddleware(['subadmin']),
     customerController.updateCustomer
   );
-  
+
 router
   .route('/history')
   .get(

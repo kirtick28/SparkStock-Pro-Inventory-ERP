@@ -18,7 +18,7 @@ import Customers from './pages/sub-admin/customer/Customers';
 import PurchaseHistory from './pages/sub-admin/purchaseHistory/PurchaseHistory';
 import { ThemeProvider } from './contexts/ThemeContext';
 import GiftBoxDashboard from './pages/sub-admin/giftbox/GiftBoxDashboard';
-import BillingProduct from './pages/sub-admin/billing/BillingProduct';
+import NewBilling from './pages/sub-admin/billing/NewBilling';
 import Settings from './pages/sub-admin/settings/Settings';
 import SubAdminManagement from './pages/super-admin/subadminManagement';
 import SuperAdminSettings from './pages/super-admin/Settings';
@@ -68,7 +68,7 @@ const App = () => {
                 <Route path="customers" element={<Customers />} />
                 <Route path="history" element={<PurchaseHistory />} />
                 <Route path="gifts" element={<GiftBoxDashboard />} />
-                <Route path="billing/:id/:name" element={<BillingProduct />} />
+                <Route path="billing" element={<NewBilling />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
 

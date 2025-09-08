@@ -43,6 +43,7 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
 
   const [giftBoxName, setGiftBoxName] = useState('');
   const [giftBoxPrice, setGiftBoxPrice] = useState('');
+  const [giftBoxStock, setGiftBoxStock] = useState(''); // Add this for manual stock input
   const [activeTab, setActiveTab] = useState('products'); // 'products' or 'cart'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -65,6 +66,7 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
             editingGiftBox.total?.toString() ||
             ''
         );
+        setGiftBoxStock(editingGiftBox.stockavailable?.toString() || '1'); // Set existing stock
 
         // Populate cart with existing products
         const existingProducts =
@@ -85,6 +87,7 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
       } else {
         setGiftBoxName('');
         setGiftBoxPrice('');
+        setGiftBoxStock(''); // Reset stock input
         dispatch(clearCart());
       }
     }
@@ -117,14 +120,23 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
   };
 
   const handleSave = () => {
-    if (!giftBoxName.trim() || cart.length === 0 || !giftBoxPrice.trim()) {
+    if (
+      !giftBoxName.trim() ||
+      cart.length === 0 ||
+      !giftBoxPrice.trim() ||
+      !giftBoxStock.trim()
+    ) {
       return;
     }
 
     const finalPrice = parseFloat(giftBoxPrice) || totalPrice;
-    const minStockAvailable = Math.min(
-      ...cart.map((item) => Math.floor(item.stockavailable / item.quantity))
-    );
+    const stockAvailable = parseInt(giftBoxStock) || 1;
+
+    // Validate that stock is a positive number
+    if (stockAvailable <= 0) {
+      alert('Stock available must be greater than 0');
+      return;
+    }
 
     const giftBoxData = {
       name: giftBoxName.trim(),
@@ -135,7 +147,7 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
       discount: 0,
       total: totalPrice,
       grandtotal: finalPrice,
-      stockavailable: minStockAvailable > 0 ? minStockAvailable : 1,
+      stockavailable: stockAvailable, // Use manual input instead of calculation
       status: true
     };
 
@@ -699,6 +711,46 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
                         Set your desired price for this gift box
                       </p>
                     </div>
+
+                    {/* Stock Available Input */}
+                    <div className="space-y-2">
+                      <label
+                        className={`block text-sm font-medium ${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                        }`}
+                      >
+                        Stock Available
+                      </label>
+                      <div className="relative">
+                        <span
+                          className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                        >
+                          📦
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={giftBoxStock}
+                          onChange={(e) => setGiftBoxStock(e.target.value)}
+                          placeholder="Enter available stock"
+                          className={`w-full pl-8 pr-3 py-2 rounded-lg border transition-colors ${
+                            theme === 'dark'
+                              ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400'
+                              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                          } focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500`}
+                        />
+                      </div>
+                      <p
+                        className={`text-xs ${
+                          theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                        }`}
+                      >
+                        Number of gift boxes available for sale
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -719,6 +771,7 @@ const GiftBoxBuilder = ({ isOpen, onClose, editingGiftBox }) => {
                     !giftBoxName.trim() ||
                     cart.length === 0 ||
                     !giftBoxPrice.trim() ||
+                    !giftBoxStock.trim() ||
                     isCreating ||
                     isUpdating
                   }

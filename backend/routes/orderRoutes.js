@@ -5,11 +5,19 @@ const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
 router
-  .route('/place-order')
+  .route('/place')
   .post(
     authMiddleware,
     roleMiddleware(['subadmin']),
     orderController.placeOrder
+  );
+
+router
+  .route('/status/:orderId')
+  .get(
+    authMiddleware,
+    roleMiddleware(['subadmin']),
+    orderController.getOrderStatus
   );
 
 router

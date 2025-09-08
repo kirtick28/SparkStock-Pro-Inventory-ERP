@@ -677,7 +677,7 @@ const Customers = () => {
 
                         {/* Bottom row - Create Bill */}
                         <Link
-                          to={`/sub-admin/billing/${customer._id}/${customer.name}`}
+                          to={`/sub-admin/billing?customer=${customer._id}`}
                           className="block w-full px-3 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-center"
                         >
                           <DollarSign size={16} className="inline mr-1.5" />

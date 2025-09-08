@@ -65,6 +65,23 @@ const Popup = ({ onClose, onSave, type = 'add' }) => {
       return;
     }
 
+    // Validate file type
+    if (
+      !selectedFile.name.toLowerCase().endsWith('.xlsx') &&
+      !selectedFile.name.toLowerCase().endsWith('.xls')
+    ) {
+      toast.error('Please select a valid Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      toast.error(
+        'File size too large. Please select a file smaller than 10MB'
+      );
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', selectedFile);
     const token = localStorage.getItem('cracker_token');
@@ -78,22 +95,54 @@ const Popup = ({ onClose, onSave, type = 'add' }) => {
           headers: {
             'Content-Type': 'multipart/form-data',
             Authorization: `Bearer ${token}`
-          }
+          },
+          timeout: 30000 // 30 second timeout for large files
         }
       );
 
       if (response.status === 201) {
-        toast.success('Data imported successfully!');
+        const { successCount, totalProcessed, errorCount } = response.data;
+        if (errorCount > 0) {
+          toast.success(
+            `Imported ${successCount} out of ${totalProcessed} products successfully!`
+          );
+        } else {
+          toast.success(`Successfully imported ${successCount} products!`);
+        }
         onSave();
         onClose();
+        setSelectedFile(null);
       }
     } catch (error) {
+      console.error('Import error:', error);
       if (error.response) {
         if (error.response.status === 400) {
-          toast.error(error.response.data.message);
+          const { message, errors, validProductsCount, totalRows } =
+            error.response.data;
+
+          if (errors && Array.isArray(errors)) {
+            // Show detailed validation errors
+            const errorMessages = errors.slice(0, 5); // Show first 5 errors
+            let errorText = `${message}\n\nValidation Errors:\n${errorMessages.join(
+              '\n'
+            )}`;
+            if (errors.length > 5) {
+              errorText += `\n... and ${errors.length - 5} more errors`;
+            }
+            if (validProductsCount !== undefined && totalRows !== undefined) {
+              errorText += `\n\nValid products: ${validProductsCount}/${totalRows}`;
+            }
+            toast.error(errorText, { autoClose: 8000 });
+          } else {
+            toast.error(message || 'Invalid file format or data');
+          }
+        } else if (error.response.status === 413) {
+          toast.error('File too large. Please reduce file size and try again');
         } else {
           toast.error('Server error, please try again');
         }
+      } else if (error.code === 'ECONNABORTED') {
+        toast.error('Upload timeout. Please try with a smaller file');
       } else {
         toast.error('Network error, please check your connection');
       }
@@ -398,6 +447,14 @@ const Popup = ({ onClose, onSave, type = 'add' }) => {
                             theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
+                          Size: {(selectedFile.size / 1024 / 1024).toFixed(2)}{' '}
+                          MB
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                        >
                           Click to change file
                         </p>
                       </div>
@@ -415,7 +472,7 @@ const Popup = ({ onClose, onSave, type = 'add' }) => {
                             theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                           }`}
                         >
-                          or click to browse
+                          or click to browse (.xlsx, .xls files only, max 10MB)
                         </p>
                       </div>
                     )}
