@@ -21,6 +21,14 @@ router
   );
 
 router
+  .route('/all')
+  .get(
+    authMiddleware,
+    roleMiddleware(['subadmin']),
+    orderController.getAllOrders
+  );
+
+router
   .route('/monthly-orders')
   .post(
     authMiddleware,

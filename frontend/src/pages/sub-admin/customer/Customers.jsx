@@ -19,7 +19,11 @@ import {
   Calendar,
   Phone,
   MapPin,
-  DollarSign
+  DollarSign,
+  User,
+  Trash2,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import CustomerCard from '../../../components/CustomerCard';
 import CreateCustomer from './Popup';
@@ -146,6 +150,47 @@ const Customers = () => {
   const handleCreateNew = () => {
     setEditCustomer(null);
     setShowCreateModal(true);
+  };
+
+  const handleToggleStatus = async (customer) => {
+    const token = localStorage.getItem('cracker_token');
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_BASEURL}/customer/`,
+        {
+          id: customer._id,
+          name: customer.name,
+          phone: customer.phone,
+          address: customer.address,
+          status: !customer.status
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.status === 200) {
+        fetchCustomers(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Error updating customer status:', error);
+    }
+  };
+
+  const handleDelete = async (customer) => {
+    if (window.confirm(`Are you sure you want to delete ${customer.name}?`)) {
+      const token = localStorage.getItem('cracker_token');
+      try {
+        const response = await axios.delete(
+          `${import.meta.env.VITE_BASEURL}/customer/${customer._id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.status === 200) {
+          fetchCustomers(); // Refresh the list
+        }
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+      }
+    }
   };
 
   const refreshData = () => {
@@ -485,20 +530,157 @@ const Customers = () => {
                     whileHover={{ y: -4 }}
                     className="group relative h-full"
                   >
-                    <div className="h-full flex flex-col">
-                      <div className="flex-1">
-                        <CustomerCard
-                          customer={customer}
-                          onEdit={handleEdit}
-                          refreshCustomers={fetchCustomers}
-                        />
+                    <div
+                      className={`${
+                        theme === 'dark'
+                          ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800'
+                          : 'bg-white/70 border-gray-200 hover:bg-white'
+                      } backdrop-blur-sm rounded-xl border p-6 hover:shadow-xl transition-all duration-300 h-full flex flex-col`}
+                    >
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between mb-5">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 mr-3">
+                          <div
+                            className={`w-12 h-12 rounded-xl ${
+                              theme === 'dark'
+                                ? 'bg-blue-900/50'
+                                : 'bg-blue-100'
+                            } flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0`}
+                          >
+                            <User
+                              size={24}
+                              className="text-blue-600 dark:text-blue-400"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3
+                              className={`font-semibold text-lg truncate ${
+                                theme === 'dark'
+                                  ? 'text-white'
+                                  : 'text-gray-900'
+                              }`}
+                            >
+                              {customer.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Phone
+                                size={14}
+                                className={
+                                  theme === 'dark'
+                                    ? 'text-gray-400'
+                                    : 'text-gray-500'
+                                }
+                              />
+                              <p
+                                className={`text-sm ${
+                                  theme === 'dark'
+                                    ? 'text-gray-400'
+                                    : 'text-gray-500'
+                                }`}
+                              >
+                                {customer.phone}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleToggleStatus(customer)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                              customer.status
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            {customer.status ? 'Active' : 'Inactive'}
+                          </motion.button>
+                        </div>
                       </div>
-                      <div className="mt-3">
+
+                      {/* Customer Details */}
+                      <div className="mb-5 flex-1">
+                        {customer.address && (
+                          <div className="flex items-start gap-2 mb-3">
+                            <MapPin
+                              size={14}
+                              className={`mt-1 flex-shrink-0 ${
+                                theme === 'dark'
+                                  ? 'text-gray-400'
+                                  : 'text-gray-500'
+                              }`}
+                            />
+                            <p
+                              className={`text-sm ${
+                                theme === 'dark'
+                                  ? 'text-gray-300'
+                                  : 'text-gray-600'
+                              }`}
+                            >
+                              {customer.address}
+                            </p>
+                          </div>
+                        )}
+
+                        {customer.createdat && (
+                          <div className="flex items-center gap-2 mt-4">
+                            <Calendar
+                              size={14}
+                              className={
+                                theme === 'dark'
+                                  ? 'text-gray-400'
+                                  : 'text-gray-500'
+                              }
+                            />
+                            <span
+                              className={`text-xs ${
+                                theme === 'dark'
+                                  ? 'text-gray-400'
+                                  : 'text-gray-500'
+                              }`}
+                            >
+                              Joined{' '}
+                              {new Date(
+                                customer.createdat
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        {/* Top row - Edit and Delete */}
+                        <div className="flex items-center gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleEdit(customer)}
+                            className="flex-1 px-3 py-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium transition-colors hover:bg-blue-200 dark:hover:bg-blue-900/50 flex items-center justify-center gap-1.5"
+                          >
+                            <Edit3 size={16} />
+                            Edit
+                          </motion.button>
+
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleDelete(customer)}
+                            className="flex-1 px-3 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium transition-colors hover:bg-red-200 dark:hover:bg-red-900/50 flex items-center justify-center gap-1.5"
+                          >
+                            <Trash2 size={16} />
+                            Delete
+                          </motion.button>
+                        </div>
+
+                        {/* Bottom row - Create Bill */}
                         <Link
                           to={`/sub-admin/billing/${customer._id}/${customer.name}`}
-                          className="w-full inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                          className="block w-full px-3 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium text-center"
                         >
-                          <DollarSign size={14} className="mr-1.5" />
+                          <DollarSign size={16} className="inline mr-1.5" />
                           Create Bill
                         </Link>
                       </div>
@@ -556,7 +738,6 @@ const Customers = () => {
           </>
         )}
       </div>
-
       {/* Create/Edit Customer Modal */}
       <AnimatePresence>
         {showCreateModal && (

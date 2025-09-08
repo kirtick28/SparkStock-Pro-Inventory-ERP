@@ -38,7 +38,9 @@ exports.placeOrder = async (req, res) => {
     }
     // Add company status check
     if (req.user.role !== 'superadmin' && !company.status) {
-        return res.status(403).json({ message: 'Company is not active. Please contact support.' });
+      return res
+        .status(403)
+        .json({ message: 'Company is not active. Please contact support.' });
     }
 
     const customer = await Customer.findById(id);
@@ -456,6 +458,27 @@ exports.getDashboardStats = async (req, res) => {
         giftBoxRevenue
       }
     });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: 'Internal server error', details: err.message });
+  }
+};
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const company = await Company.findOne({ admin: req.user.id });
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+
+    const orders = await Order.find({ companyId: company._id })
+      .populate('customer', 'name phone address')
+      .sort({ createdat: -1 })
+      .lean();
+
+    res.status(200).json(orders);
   } catch (err) {
     console.error(err);
     res

@@ -14,6 +14,8 @@ const CreateCustomer = ({ refreshCustomers, editData, onClose }) => {
     address: ''
   });
 
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
     if (editData) {
       setFormData({
@@ -29,16 +31,63 @@ const CreateCustomer = ({ refreshCustomers, editData, onClose }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Handle phone number validation
+    if (name === 'phone') {
+      // Only allow digits and limit to 10 characters
+      const phoneValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData((prev) => ({ ...prev, [name]: phoneValue }));
+
+      // Validate phone number
+      if (phoneValue.length === 0) {
+        setErrors((prev) => ({ ...prev, phone: 'Phone number is required' }));
+      } else if (phoneValue.length !== 10) {
+        setErrors((prev) => ({
+          ...prev,
+          phone: 'Phone number must be exactly 10 digits'
+        }));
+      } else {
+        setErrors((prev) => ({ ...prev, phone: '' }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+
+      // Clear name error if user starts typing
+      if (name === 'name' && value.trim()) {
+        setErrors((prev) => ({ ...prev, name: '' }));
+      }
+    }
   };
 
   const handleClose = () => {
     onClose();
     setFormData({ name: '', phone: '', address: '' });
+    setErrors({});
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form
+    const newErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Customer name is required';
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (formData.phone.length !== 10) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
+    }
+
+    setErrors(newErrors);
+
+    // If there are errors, don't submit
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
     setLoading(true);
     const token = localStorage.getItem('cracker_token');
 
@@ -177,12 +226,19 @@ const CreateCustomer = ({ refreshCustomers, editData, onClose }) => {
                 required
                 placeholder="Enter customer name"
                 className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  theme === 'dark'
+                  errors.name
+                    ? 'border-red-500 focus:ring-red-500'
+                    : theme === 'dark'
                     ? 'bg-gray-700/50 border-gray-600 text-gray-200 placeholder-gray-400'
                     : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
                 }`}
               />
             </div>
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {errors.name}
+              </p>
+            )}
           </motion.div>
 
           {/* Phone Field */}
@@ -211,14 +267,22 @@ const CreateCustomer = ({ refreshCustomers, editData, onClose }) => {
                 value={formData.phone}
                 onChange={handleChange}
                 required
-                placeholder="Enter phone number"
+                placeholder="Enter 10 digit phone number"
+                maxLength={10}
                 className={`w-full pl-10 pr-4 py-3 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  theme === 'dark'
+                  errors.phone
+                    ? 'border-red-500 focus:ring-red-500'
+                    : theme === 'dark'
                     ? 'bg-gray-700/50 border-gray-600 text-gray-200 placeholder-gray-400'
                     : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500'
                 }`}
               />
             </div>
+            {errors.phone && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {errors.phone}
+              </p>
+            )}
           </motion.div>
 
           {/* Address Field */}
