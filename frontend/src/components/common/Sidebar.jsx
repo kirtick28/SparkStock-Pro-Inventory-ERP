@@ -30,7 +30,7 @@ const roleConfig = {
   ]
 };
 
-const Sidebar = ({ role, isOpen, isMobile }) => {
+const Sidebar = ({ role, isOpen, isMobile, isVisible = true }) => {
   const { logout } = useAuth();
   const { theme } = useTheme();
   const navItems = [...(roleConfig[role] || [])];
@@ -38,16 +38,26 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
 
   const sidebarVariants = {
     open: {
-      width: isMobile ? '16rem' : '16rem', // Full width on mobile when open
+      width: isMobile ? '16rem' : '16rem',
       x: 0,
+      opacity: 1,
       transition: {
         duration: 0.3,
         ease: 'easeInOut'
       }
     },
     closed: {
-      width: isMobile ? '16rem' : '5rem', // Still same width on mobile but positioned off-screen
-      x: isMobile ? '-100%' : 0, // Slide off-screen on mobile
+      width: isMobile ? '16rem' : '5rem',
+      x: isMobile ? '-100%' : 0,
+      opacity: isMobile ? 0 : 1,
+      transition: {
+        duration: 0.3,
+        ease: 'easeInOut'
+      }
+    },
+    hidden: {
+      x: '-100%',
+      opacity: 0,
       transition: {
         duration: 0.3,
         ease: 'easeInOut'
@@ -58,31 +68,48 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
   const contentVariants = {
     open: {
       opacity: 1,
+      scale: 1,
       transition: {
         delay: 0.1,
         duration: 0.2
       }
     },
     closed: {
-      opacity: 0,
+      opacity: isMobile ? 0 : 0,
+      scale: isMobile ? 0.95 : 1,
       transition: {
         duration: 0.1
       }
     }
   };
 
+  // Determine animation state
+  const getAnimationState = () => {
+    if (!isVisible) return 'hidden';
+    return isOpen ? 'open' : 'closed';
+  };
+
+  // Show content based on state
+  const shouldShowContent = () => {
+    if (isMobile) return isOpen && isVisible;
+    return isVisible; // On desktop, always show content when visible
+  };
+
   return (
     <motion.aside
-      initial="open"
-      animate={isOpen ? 'open' : 'closed'}
+      initial="closed"
+      animate={getAnimationState()}
       variants={sidebarVariants}
       className={`fixed top-0 left-0 h-full z-50 ${
         theme === 'dark'
           ? 'bg-gray-900/95 border-gray-700'
           : 'bg-white/95 border-gray-200'
       } border-r backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden ${
-        isMobile ? 'w-64' : '' // Fixed width on mobile
-      }`}
+        isMobile ? 'w-64' : ''
+      } ${!isVisible ? 'pointer-events-none' : ''}`}
+      style={{
+        visibility: isVisible || !isMobile ? 'visible' : 'hidden'
+      }}
     >
       {/* Logo Section */}
       <div
@@ -92,7 +119,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
       >
         <div
           className={`flex items-center ${
-            isOpen || isMobile ? 'gap-3' : 'justify-center'
+            shouldShowContent() && isOpen ? 'gap-3' : 'justify-center'
           }`}
         >
           <motion.div
@@ -102,17 +129,20 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
           >
             <div
               className={`${
-                isOpen || isMobile ? 'w-10 h-10' : 'w-8 h-8'
+                shouldShowContent() && isOpen ? 'w-10 h-10' : 'w-8 h-8'
               } rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center ${
                 theme === 'dark' ? 'shadow-blue-500/25' : 'shadow-blue-500/25'
               } shadow-lg transition-all duration-300`}
             >
-              <Zap className="text-white" size={isOpen || isMobile ? 20 : 16} />
+              <Zap
+                className="text-white"
+                size={shouldShowContent() && isOpen ? 20 : 16}
+              />
             </div>
           </motion.div>
 
           <AnimatePresence>
-            {(isOpen || isMobile) && (
+            {shouldShowContent() && isOpen && (
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -140,21 +170,23 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
       {/* Navigation */}
       <div
         className={`flex-1 ${
-          isOpen ? 'p-4' : 'p-2'
+          isOpen && shouldShowContent() ? 'p-4' : 'p-2'
         } space-y-2 transition-all duration-300`}
       >
         {navItems.map((item, index) => (
           <motion.div
             key={item.name}
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+            animate={{ opacity: shouldShowContent() ? 1 : 0, y: 0 }}
+            transition={{ delay: shouldShowContent() ? index * 0.1 : 0 }}
           >
             <NavLink
               to={item.path}
               className={({ isActive }) =>
                 `group flex items-center ${
-                  isOpen ? 'gap-3 px-3 py-3' : 'justify-center px-2 py-4'
+                  isOpen && shouldShowContent()
+                    ? 'gap-3 px-3 py-3'
+                    : 'justify-center px-2 py-4'
                 } rounded-xl transition-all duration-200 relative overflow-hidden ${
                   isActive
                     ? `${
@@ -187,7 +219,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
 
                   <div
                     className={`relative z-10 flex items-center ${
-                      isOpen ? 'gap-3' : 'justify-center'
+                      isOpen && shouldShowContent() ? 'gap-3' : 'justify-center'
                     } w-full`}
                   >
                     <div
@@ -195,11 +227,13 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
                         isActive ? 'scale-110' : 'group-hover:scale-110'
                       } transition-transform`}
                     >
-                      <item.icon size={isOpen ? 20 : 22} />
+                      <item.icon
+                        size={isOpen && shouldShowContent() ? 20 : 22}
+                      />
                     </div>
 
                     <AnimatePresence>
-                      {isOpen && (
+                      {isOpen && shouldShowContent() && (
                         <motion.span
                           variants={contentVariants}
                           initial="closed"
@@ -213,7 +247,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
                     </AnimatePresence>
 
                     {/* Tooltip for collapsed state */}
-                    {!isOpen && (
+                    {(!isOpen || !shouldShowContent()) && (
                       <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
                         <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
                         {item.name}
@@ -230,7 +264,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
       {/* Bottom Section */}
       <div
         className={`${
-          isOpen ? 'p-4' : 'p-2'
+          isOpen && shouldShowContent() ? 'p-4' : 'p-2'
         } border-t border-gray-200 dark:border-gray-700 space-y-2 transition-all duration-300`}
       >
         {/* Settings */}
@@ -239,7 +273,9 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
             to={`/${toNav}/settings`}
             className={({ isActive }) =>
               `group flex items-center ${
-                isOpen ? 'gap-3 px-3 py-3' : 'justify-center px-2 py-4'
+                isOpen && shouldShowContent()
+                  ? 'gap-3 px-3 py-3'
+                  : 'justify-center px-2 py-4'
               } rounded-xl transition-all duration-200 relative ${
                 isActive
                   ? `${
@@ -255,9 +291,12 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
               }`
             }
           >
-            <Settings size={isOpen ? 20 : 22} className="flex-shrink-0" />
+            <Settings
+              size={isOpen && shouldShowContent() ? 20 : 22}
+              className="flex-shrink-0"
+            />
             <AnimatePresence>
-              {isOpen && (
+              {isOpen && shouldShowContent() && (
                 <motion.span
                   variants={contentVariants}
                   initial="closed"
@@ -271,7 +310,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
             </AnimatePresence>
 
             {/* Tooltip for collapsed state */}
-            {!isOpen && (
+            {(!isOpen || !shouldShowContent()) && (
               <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
                 <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
                 Settings
@@ -286,18 +325,21 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
           whileTap={{ scale: 0.98 }}
           onClick={logout}
           className={`group flex items-center ${
-            isOpen ? 'gap-3' : 'justify-center'
+            isOpen && shouldShowContent() ? 'gap-3' : 'justify-center'
           } w-full ${
-            isOpen ? 'px-3 py-3' : 'px-2 py-4'
+            isOpen && shouldShowContent() ? 'px-3 py-3' : 'px-2 py-4'
           } rounded-xl transition-all duration-200 relative ${
             theme === 'dark'
               ? 'text-red-400 hover:bg-red-900/20 hover:text-red-300'
               : 'text-red-600 hover:bg-red-50 hover:text-red-700'
           }`}
         >
-          <LogOut size={isOpen ? 20 : 22} className="flex-shrink-0" />
+          <LogOut
+            size={isOpen && shouldShowContent() ? 20 : 22}
+            className="flex-shrink-0"
+          />
           <AnimatePresence>
-            {isOpen && (
+            {isOpen && shouldShowContent() && (
               <motion.span
                 variants={contentVariants}
                 initial="closed"
@@ -311,7 +353,7 @@ const Sidebar = ({ role, isOpen, isMobile }) => {
           </AnimatePresence>
 
           {/* Tooltip for collapsed state */}
-          {!isOpen && (
+          {(!isOpen || !shouldShowContent()) && (
             <div className="absolute left-20 bg-gray-900 dark:bg-gray-700 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg">
               <div className="absolute -left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
               Sign Out

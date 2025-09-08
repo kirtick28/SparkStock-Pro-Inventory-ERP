@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,12 +10,21 @@ const BaseLayout = ({ role }) => {
   const { theme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
       const wasMobile = isMobile;
+
       setIsMobile(mobile);
+
+      // Initialize sidebar state on first load
+      if (!isInitialized) {
+        setSidebarOpen(!mobile); // Open on desktop, closed on mobile
+        setIsInitialized(true);
+        return;
+      }
 
       // If switching from mobile to desktop, open sidebar
       if (wasMobile && !mobile) {
@@ -30,20 +39,21 @@ const BaseLayout = ({ role }) => {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isMobile]);
+  }, [isMobile, isInitialized]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-slate-900">
-      {/* Sidebar */}
-      <AnimatePresence>
-        {(sidebarOpen || !isMobile) && (
-          <Sidebar role={role} isOpen={sidebarOpen} isMobile={isMobile} />
-        )}
-      </AnimatePresence>
+      {/* Sidebar - Always rendered on desktop, conditionally on mobile */}
+      <Sidebar
+        role={role}
+        isOpen={sidebarOpen}
+        isMobile={isMobile}
+        isVisible={isMobile ? sidebarOpen : true}
+      />
 
       {/* Main Content Area */}
       <div
@@ -52,7 +62,7 @@ const BaseLayout = ({ role }) => {
             ? 'ml-64'
             : !isMobile && !sidebarOpen
             ? 'ml-20'
-            : 'ml-0' // On mobile, always ml-0
+            : 'ml-0'
         }`}
       >
         {/* Header */}

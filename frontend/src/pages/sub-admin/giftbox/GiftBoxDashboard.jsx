@@ -53,6 +53,7 @@ const GiftBoxDashboard = () => {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [editingGiftBox, setEditingGiftBox] = useState(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   // Smart fetching with caching
   const {
@@ -196,6 +197,11 @@ const GiftBoxDashboard = () => {
     setShowBuilder(true);
   };
 
+  const handleRefresh = () => {
+    refreshGiftBoxes();
+    refreshProducts();
+  };
+
   const handleBuilderClose = () => {
     setShowBuilder(false);
     setEditingGiftBox(null);
@@ -278,13 +284,13 @@ const GiftBoxDashboard = () => {
           theme === 'dark'
             ? 'bg-gray-800/50 border-gray-700'
             : 'bg-white/70 border-gray-200'
-        } backdrop-blur-sm rounded-xl border p-4 md:p-6 mb-6 md:mb-8`}
+        } backdrop-blur-sm rounded-xl border p-3 md:p-4 mb-4 md:mb-6`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
+          {/* Search - Made more compact */}
+          <div className="flex-1 min-w-0 relative">
             <Search
-              size={20}
+              size={18}
               className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
                 theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
               }`}
@@ -294,7 +300,7 @@ const GiftBoxDashboard = () => {
               placeholder="Search gift boxes..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full pl-10 pr-4 py-3 rounded-lg border text-sm transition-colors ${
+              className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-colors ${
                 theme === 'dark'
                   ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:border-blue-500'
                   : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
@@ -302,8 +308,8 @@ const GiftBoxDashboard = () => {
             />
           </div>
 
-          {/* Filters and Sort */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Desktop Filters and Actions */}
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
             {/* Status Filter */}
             <div className="flex items-center gap-2">
               <Filter
@@ -313,7 +319,7 @@ const GiftBoxDashboard = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
                   theme === 'dark'
                     ? 'bg-gray-700 border-gray-600 text-gray-200'
                     : 'bg-gray-50 border-gray-300 text-gray-900'
@@ -334,7 +340,7 @@ const GiftBoxDashboard = () => {
               <select
                 value={priceRange}
                 onChange={(e) => setPriceRange(e.target.value)}
-                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
                   theme === 'dark'
                     ? 'bg-gray-700 border-gray-600 text-gray-200'
                     : 'bg-gray-50 border-gray-300 text-gray-900'
@@ -347,7 +353,7 @@ const GiftBoxDashboard = () => {
               </select>
             </div>
 
-            {/* Sort Options */}
+            {/* Sort */}
             <div className="flex items-center gap-2">
               <TrendingUp
                 size={16}
@@ -356,7 +362,7 @@ const GiftBoxDashboard = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
                   theme === 'dark'
                     ? 'bg-gray-700 border-gray-600 text-gray-200'
                     : 'bg-gray-50 border-gray-300 text-gray-900'
@@ -367,40 +373,191 @@ const GiftBoxDashboard = () => {
                 <option value="items">Items Count</option>
                 <option value="created">Created Date</option>
               </select>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() =>
+                  setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                }
+                className={`p-2 rounded-lg transition-colors ${
+                  theme === 'dark'
+                    ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                }`}
+                title={`Sort ${
+                  sortOrder === 'asc' ? 'Ascending' : 'Descending'
+                }`}
+              >
+                {sortOrder === 'asc' ? (
+                  <SortAsc size={16} />
+                ) : (
+                  <SortDesc size={16} />
+                )}
+              </motion.button>
             </div>
 
-            {/* Sort Order Toggle */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className={`p-2 rounded-lg transition-colors ${
-                theme === 'dark'
-                  ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
-              title={`Sort ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
-            >
-              {sortOrder === 'asc' ? (
-                <SortAsc size={16} />
-              ) : (
-                <SortDesc size={16} />
-              )}
-            </motion.button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pl-2 border-l border-gray-300 dark:border-gray-600">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleRefresh}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+                title="Refresh Data"
+              >
+                <RefreshCw size={16} className="inline mr-1.5" />
+                Refresh
+              </motion.button>
 
-            {/* Create New Button */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCreateNew}
+                className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <Plus size={16} className="inline mr-1.5" />
+                Create
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Mobile Controls */}
+          <div className="flex md:hidden items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Filter size={16} />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleRefresh}
+                className={`p-2 rounded-lg ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <RefreshCw size={16} />
+              </motion.button>
+            </div>
+
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleCreateNew}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium"
             >
               <Plus size={16} />
-              <span className="hidden sm:inline">Create Gift Box</span>
-              <span className="sm:hidden">Create</span>
             </motion.button>
           </div>
         </div>
+
+        {/* Mobile Expanded Filters */}
+        <AnimatePresence>
+          {showMobileFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 md:hidden"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">
+                    Price Range
+                  </label>
+                  <select
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(e.target.value)}
+                    className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-gray-200'
+                        : 'bg-gray-50 border-gray-300 text-gray-900'
+                    }`}
+                  >
+                    <option value="all">All Prices</option>
+                    <option value="low">Under ₹500</option>
+                    <option value="medium">₹500 - ₹2000</option>
+                    <option value="high">Above ₹2000</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-gray-400">
+                    Sort By
+                  </label>
+                  <div className="flex gap-1">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600 text-gray-200'
+                          : 'bg-gray-50 border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      <option value="name">Name</option>
+                      <option value="price">Price</option>
+                      <option value="items">Items Count</option>
+                      <option value="created">Created Date</option>
+                    </select>
+
+                    <button
+                      onClick={() =>
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+                      }
+                      className={`p-2 rounded-lg border ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600 text-gray-200'
+                          : 'bg-gray-50 border-gray-300 text-gray-900'
+                      }`}
+                    >
+                      {sortOrder === 'asc' ? (
+                        <SortAsc size={16} />
+                      ) : (
+                        <SortDesc size={16} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Gift Boxes Grid */}
