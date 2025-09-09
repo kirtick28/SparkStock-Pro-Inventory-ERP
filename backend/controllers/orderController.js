@@ -12,9 +12,6 @@ const mongoose = require('mongoose');
 const fs = require('fs').promises;
 
 exports.placeOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const {
       id,
@@ -26,6 +23,19 @@ exports.placeOrder = async (req, res) => {
       gst,
       customerInfo
     } = req.body;
+
+    console.log('Order request data:', {
+      id,
+      products: products?.length || 0,
+      giftboxes: giftboxes?.length || 0,
+      discount,
+      total,
+      grandtotal,
+      gst,
+      customerInfo: customerInfo
+        ? { name: customerInfo.name, hasPhone: !!customerInfo.phone }
+        : null
+    });
 
     // Enhanced validation
     if (!products || !Array.isArray(products) || products.length === 0) {
@@ -42,11 +52,9 @@ exports.placeOrder = async (req, res) => {
       grandtotal === undefined ||
       !gst
     ) {
-      return res
-        .status(400)
-        .json({
-          message: 'Missing required fields: discount, total, grandtotal, gst'
-        });
+      return res.status(400).json({
+        message: 'Missing required fields: discount, total, grandtotal, gst'
+      });
     }
 
     // Validate numeric values
@@ -55,19 +63,15 @@ exports.placeOrder = async (req, res) => {
     const grandtotalNum = parseFloat(grandtotal);
 
     if (isNaN(discountNum) || isNaN(totalNum) || isNaN(grandtotalNum)) {
-      return res
-        .status(400)
-        .json({
-          message: 'Invalid numeric values for discount, total, or grandtotal'
-        });
+      return res.status(400).json({
+        message: 'Invalid numeric values for discount, total, or grandtotal'
+      });
     }
 
     if (discountNum < 0 || totalNum < 0 || grandtotalNum < 0) {
-      return res
-        .status(400)
-        .json({
-          message: 'Discount, total, and grandtotal must be non-negative'
-        });
+      return res.status(400).json({
+        message: 'Discount, total, and grandtotal must be non-negative'
+      });
     }
 
     const gstAmount = gst.amount ? parseFloat(gst.amount) : 0;
@@ -76,17 +80,13 @@ exports.placeOrder = async (req, res) => {
     }
 
     // Get company details
-    const company = await Company.findOne({ admin: req.user.id }).session(
-      session
-    );
+    const company = await Company.findOne({ admin: req.user.id });
     if (!company) {
-      await session.abortTransaction();
       return res.status(404).json({ message: 'Company details not found' });
     }
 
     // Add company status check
     if (req.user.role !== 'superadmin' && !company.status) {
-      await session.abortTransaction();
       return res.status(403).json({
         message: 'Company is not active. Please contact support.'
       });
@@ -95,26 +95,59 @@ exports.placeOrder = async (req, res) => {
     let customer = null;
     let customerData = null;
 
-    // Handle customer - either existing customer ID or new customer info
+    // Handle customer scenarios
     if (id) {
-      customer = await Customer.findById(id).session(session);
+      // Existing customer scenario
+      console.log('Processing existing customer with ID:', id);
+      customer = await Customer.findById(id);
       if (!customer) {
-        await session.abortTransaction();
         return res.status(404).json({ message: 'Customer not found' });
       }
-      customerData = customer;
-    } else if (customerInfo && customerInfo.name && customerInfo.name.trim()) {
-      // Validate customer info
       customerData = {
+        name: customer.name,
+        phone: customer.phone || '',
+        address: customer.address || '',
+        city: customer.city || '',
+        state: customer.state || '',
+        pincode: customer.pincode || ''
+      };
+      console.log('Existing customer loaded:', customer.name);
+    } else if (customerInfo && customerInfo.name && customerInfo.name.trim()) {
+      // New customer scenario - create customer if enough info provided
+      console.log('Processing new customer:', customerInfo.name);
+      const newCustomerData = {
         name: customerInfo.name.trim(),
         phone: customerInfo.phone?.trim() || '',
         address: customerInfo.address?.trim() || '',
         city: customerInfo.city?.trim() || '',
         state: customerInfo.state?.trim() || '',
-        pincode: customerInfo.pincode?.trim() || ''
+        pincode: customerInfo.pincode?.trim() || '',
+        companyId: company._id
       };
+
+      // Create new customer if we have at least name and either phone or address
+      if (
+        newCustomerData.name &&
+        (newCustomerData.phone || newCustomerData.address)
+      ) {
+        try {
+          customer = new Customer(newCustomerData);
+          await customer.save();
+          customerData = newCustomerData;
+          console.log('New customer created:', customer.name);
+        } catch (error) {
+          console.error('Error creating new customer:', error);
+          // If customer creation fails, continue with walk-in customer
+          customerData = newCustomerData;
+          console.log('Customer creation failed, using as walk-in customer');
+        }
+      } else {
+        customerData = newCustomerData;
+        console.log('Insufficient customer data, using as temporary customer');
+      }
     } else {
-      // Default walk-in customer
+      // Walk-in customer scenario
+      console.log('Processing walk-in customer');
       customerData = {
         name: 'Walk-in Customer',
         phone: '',
@@ -126,16 +159,13 @@ exports.placeOrder = async (req, res) => {
     }
 
     const cartItems = [];
-    const bulkProductUpdates = [];
-    const bulkGiftBoxUpdates = [];
 
-    // Process products with bulk operations
+    // Process products
     if (products && Array.isArray(products) && products.length > 0) {
       for (const item of products) {
         const { productId, quantity } = item;
 
         if (!productId || !quantity || quantity < 1) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Invalid product data: productId and quantity are required`
           });
@@ -143,22 +173,19 @@ exports.placeOrder = async (req, res) => {
 
         const quantityNum = parseInt(quantity);
         if (isNaN(quantityNum) || quantityNum < 1) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Invalid quantity for product: ${productId}`
           });
         }
 
-        const product = await Product.findById(productId).session(session);
+        const product = await Product.findById(productId);
         if (!product) {
-          await session.abortTransaction();
           return res.status(404).json({
             message: `Product not found: ${productId}`
           });
         }
 
         if (product.stockavailable < quantityNum) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Insufficient stock for product: ${product.name}. Available: ${product.stockavailable}, Requested: ${quantityNum}`
           });
@@ -166,17 +193,12 @@ exports.placeOrder = async (req, res) => {
 
         const itemTotal = quantityNum * product.price;
 
-        // Prepare bulk update
-        bulkProductUpdates.push({
-          updateOne: {
-            filter: { _id: productId },
-            update: {
-              $inc: {
-                stockavailable: -quantityNum,
-                totalsales: quantityNum,
-                totalrevenue: itemTotal
-              }
-            }
+        // Update product stock and sales
+        await Product.findByIdAndUpdate(productId, {
+          $inc: {
+            stockavailable: -quantityNum,
+            totalsales: quantityNum,
+            totalrevenue: itemTotal
           }
         });
 
@@ -191,13 +213,12 @@ exports.placeOrder = async (req, res) => {
       }
     }
 
-    // Process gift boxes with bulk operations
+    // Process gift boxes
     if (giftboxes && Array.isArray(giftboxes) && giftboxes.length > 0) {
       for (const box of giftboxes) {
         const { giftBoxId, quantity } = box;
 
         if (!giftBoxId || !quantity || quantity < 1) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Invalid gift box data: giftBoxId and quantity are required`
           });
@@ -205,22 +226,19 @@ exports.placeOrder = async (req, res) => {
 
         const quantityNum = parseInt(quantity);
         if (isNaN(quantityNum) || quantityNum < 1) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Invalid quantity for gift box: ${giftBoxId}`
           });
         }
 
-        const giftBox = await GiftBox.findById(giftBoxId).session(session);
+        const giftBox = await GiftBox.findById(giftBoxId);
         if (!giftBox) {
-          await session.abortTransaction();
           return res.status(404).json({
             message: `GiftBox not found: ${giftBoxId}`
           });
         }
 
         if (giftBox.stockavailable < quantityNum) {
-          await session.abortTransaction();
           return res.status(400).json({
             message: `Insufficient stock for gift box: ${giftBox.name}. Available: ${giftBox.stockavailable}, Requested: ${quantityNum}`
           });
@@ -228,17 +246,12 @@ exports.placeOrder = async (req, res) => {
 
         const boxTotal = quantityNum * giftBox.grandtotal;
 
-        // Prepare bulk update
-        bulkGiftBoxUpdates.push({
-          updateOne: {
-            filter: { _id: giftBoxId },
-            update: {
-              $inc: {
-                stockavailable: -quantityNum,
-                totalsales: quantityNum,
-                totalrevenue: boxTotal
-              }
-            }
+        // Update gift box stock and sales
+        await GiftBox.findByIdAndUpdate(giftBoxId, {
+          $inc: {
+            stockavailable: -quantityNum,
+            totalsales: quantityNum,
+            totalrevenue: boxTotal
           }
         });
 
@@ -251,14 +264,6 @@ exports.placeOrder = async (req, res) => {
           type: 'giftbox'
         });
       }
-    }
-
-    // Execute bulk updates
-    if (bulkProductUpdates.length > 0) {
-      await Product.bulkWrite(bulkProductUpdates, { session });
-    }
-    if (bulkGiftBoxUpdates.length > 0) {
-      await GiftBox.bulkWrite(bulkGiftBoxUpdates, { session });
     }
 
     // Create order
@@ -288,19 +293,21 @@ exports.placeOrder = async (req, res) => {
       customerInfo: customer ? null : customerData
     });
 
-    const savedOrder = await order.save({ session });
+    const savedOrder = await order.save();
 
     // Update customer orders if it's a registered customer
     if (customer) {
-      await Customer.findByIdAndUpdate(
-        customer._id,
-        { $push: { orders: { id: savedOrder._id } } },
-        { session }
-      );
+      await Customer.findByIdAndUpdate(customer._id, {
+        $push: { orders: { id: savedOrder._id } }
+      });
     }
 
-    // Commit transaction before PDF generation
-    await session.commitTransaction();
+    // Delete cart if it's for an existing customer
+    if (id) {
+      Cart.deleteOne({ id }).catch((err) =>
+        console.error('Error deleting cart:', err)
+      );
+    }
 
     const orderDetails = {
       cartitems: cartItems,
@@ -325,13 +332,6 @@ exports.placeOrder = async (req, res) => {
       savedOrder._id
     );
 
-    // Delete cart if it's for an existing customer
-    if (id) {
-      Cart.deleteOne({ id }).catch((err) =>
-        console.error('Error deleting cart:', err)
-      );
-    }
-
     // Start PDF generation but don't wait for it
     pdfPromise
       .then((pdfUrl) => {
@@ -339,25 +339,42 @@ exports.placeOrder = async (req, res) => {
         Order.findByIdAndUpdate(savedOrder._id, { invoicepdf: pdfUrl }).catch(
           (err) => console.error('Error updating order with PDF URL:', err)
         );
+        console.log(
+          `PDF generated and uploaded successfully for order ${savedOrder._id}: ${pdfUrl}`
+        );
       })
       .catch((err) => {
-        console.error('PDF generation failed:', err);
+        console.error(
+          'PDF generation failed for order:',
+          savedOrder._id,
+          err.message
+        );
+        // Mark order with error status for retry later
+        Order.findByIdAndUpdate(savedOrder._id, {
+          pdfError: err.message,
+          pdfGenerationAttempts: 1
+        }).catch(console.error);
       });
 
     res.status(200).json({
       message: 'Order placed successfully. Invoice is being generated.',
       orderId: savedOrder._id,
-      pdfUrl: null // Will be available shortly
+      pdfUrl: null, // Will be available shortly
+      customerType: customer
+        ? 'existing'
+        : customerInfo &&
+          customerInfo.name &&
+          customerInfo.name.trim() &&
+          customerInfo.name !== 'Walk-in Customer'
+        ? 'new'
+        : 'walkin'
     });
   } catch (error) {
     console.error('Error placing order:', error);
-    await session.abortTransaction();
     res.status(500).json({
       message: 'Error placing order',
       error: error.message
     });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -368,22 +385,81 @@ const generateAndUploadPDF = async (
   customerData,
   orderId
 ) => {
+  const startTime = Date.now();
+  console.log(`Starting PDF generation for order ${orderId}...`);
+
   try {
-    await generatePDF(pdfParams);
-    const url = await uploadPDFToCloudinary(
-      './invoice.pdf',
-      company.companyname,
-      customerData.name
+    // Generate PDF using Puppeteer
+    const pdfResult = await generatePDF(pdfParams);
+
+    if (!pdfResult.success) {
+      throw new Error('PDF generation failed');
+    }
+
+    console.log(
+      `PDF generated successfully in ${
+        Date.now() - startTime
+      }ms for order ${orderId}`
+    );
+    console.log(`PDF saved at: ${pdfResult.filepath}`);
+
+    // Upload to Cloudinary with timeout
+    const uploadStartTime = Date.now();
+    console.log(`Starting Cloudinary upload for order ${orderId}...`);
+
+    const uploadPromise = uploadPDFToCloudinary(
+      pdfResult.filepath,
+      company.companyname || 'Unknown_Company',
+      customerData.name || 'Unknown_Customer'
     );
 
-    // Clean up the temporary PDF file
-    await fs
-      .unlink('./invoice.pdf')
-      .catch((err) => console.error('Error deleting invoice.pdf:', err));
+    const uploadTimeoutPromise = new Promise(
+      (_, reject) =>
+        setTimeout(() => reject(new Error('Cloudinary upload timeout')), 60000) // 60 second timeout
+    );
 
-    return url;
+    const cloudinaryUrl = await Promise.race([
+      uploadPromise,
+      uploadTimeoutPromise
+    ]);
+
+    console.log(
+      `PDF uploaded to Cloudinary in ${
+        Date.now() - uploadStartTime
+      }ms for order ${orderId}`
+    );
+    console.log(`Cloudinary URL: ${cloudinaryUrl}`);
+    console.log(
+      `Total PDF process time: ${Date.now() - startTime}ms for order ${orderId}`
+    );
+
+    // Clean up the local PDF file after successful upload
+    try {
+      await fs.unlink(pdfResult.filepath);
+      console.log(`Local PDF file cleaned up for order ${orderId}`);
+    } catch (cleanupError) {
+      console.error('Error deleting local PDF file:', cleanupError.message);
+      // Don't throw error for cleanup failure, just log it
+    }
+
+    return cloudinaryUrl;
   } catch (error) {
-    console.error('PDF generation/upload error:', error);
+    console.error(
+      `PDF generation/upload failed for order ${orderId}:`,
+      error.message
+    );
+
+    // If it's an upload error, try to keep the local file
+    if (
+      error.message.includes('Cloudinary') ||
+      error.message.includes('upload')
+    ) {
+      console.log(
+        `Cloudinary upload failed for order ${orderId}, keeping local file`
+      );
+      // You could implement a retry mechanism here or return local path as fallback
+    }
+
     throw error;
   }
 };
@@ -408,17 +484,201 @@ exports.getOrderStatus = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    let status = 'processing';
+    let message = 'Invoice is being generated...';
+
+    if (order.invoicepdf) {
+      status = 'completed';
+      message = 'Invoice ready';
+    } else if (order.pdfError) {
+      status = 'error';
+      message = `PDF generation failed: ${order.pdfError}`;
+
+      // Retry PDF generation if not too many attempts
+      const attempts = order.pdfGenerationAttempts || 0;
+      if (attempts < 3) {
+        message += ' - Retrying...';
+
+        // Trigger retry in background
+        retryPDFGeneration(orderId).catch((err) =>
+          console.error('Retry PDF generation failed:', err)
+        );
+      }
+    }
+
     res.status(200).json({
       orderId: order._id,
-      status: order.invoicepdf ? 'completed' : 'processing',
+      status,
+      message,
       pdfUrl: order.invoicepdf || null,
       createdAt: order.createdat,
-      grandTotal: order.grandtotal
+      grandTotal: order.grandtotal,
+      attempts: order.pdfGenerationAttempts || 0
     });
   } catch (error) {
     console.error('Error getting order status:', error);
     res.status(500).json({
       message: 'Error getting order status',
+      error: error.message
+    });
+  }
+};
+
+// Retry PDF generation function
+const retryPDFGeneration = async (orderId) => {
+  try {
+    const order = await Order.findById(orderId).populate('customer');
+    if (!order) return;
+
+    const company = await Company.findById(order.companyId);
+    if (!company) return;
+
+    // Increment retry attempts
+    await Order.findByIdAndUpdate(orderId, {
+      $inc: { pdfGenerationAttempts: 1 },
+      $unset: { pdfError: 1 }
+    });
+
+    // Get customer data
+    let customerData;
+    if (order.customer) {
+      customerData = {
+        name: order.customer.name,
+        phone: order.customer.phone || '',
+        address: order.customer.address || '',
+        city: order.customer.city || '',
+        state: order.customer.state || '',
+        pincode: order.customer.pincode || ''
+      };
+    } else {
+      customerData = order.customerInfo || {
+        name: 'Walk-in Customer',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: ''
+      };
+    }
+
+    // Recreate cart items from order data
+    const cartItems = [];
+
+    // Add products
+    if (order.cartitems && order.cartitems.length > 0) {
+      for (const item of order.cartitems) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          cartItems.push({
+            id: product._id,
+            name: product.name,
+            unitprice: product.price,
+            quantity: item.quantity,
+            total: item.quantity * product.price,
+            type: 'product'
+          });
+        }
+      }
+    }
+
+    // Add gift boxes
+    if (order.giftboxes && order.giftboxes.length > 0) {
+      for (const item of order.giftboxes) {
+        const giftBox = await GiftBox.findById(item.giftBoxId);
+        if (giftBox) {
+          cartItems.push({
+            id: giftBox._id,
+            name: giftBox.name,
+            unitprice: giftBox.grandtotal,
+            quantity: item.quantity,
+            total: item.quantity * giftBox.grandtotal,
+            type: 'giftbox'
+          });
+        }
+      }
+    }
+
+    const orderDetails = {
+      cartitems: cartItems,
+      discount: order.discount,
+      total: order.total,
+      grandtotal: order.grandtotal,
+      gst: order.gst,
+      createdat: order.createdat
+    };
+
+    const pdfParams = {
+      companyDetails: company,
+      customerDetails: customerData,
+      orderDetails
+    };
+
+    const pdfUrl = await generateAndUploadPDF(
+      pdfParams,
+      company,
+      customerData,
+      orderId
+    );
+
+    await Order.findByIdAndUpdate(orderId, {
+      invoicepdf: pdfUrl,
+      $unset: { pdfError: 1 }
+    });
+
+    console.log(`PDF retry successful for order ${orderId}`);
+    return pdfUrl;
+  } catch (error) {
+    console.error(`PDF retry failed for order ${orderId}:`, error.message);
+    await Order.findByIdAndUpdate(orderId, {
+      pdfError: error.message
+    });
+    throw error;
+  }
+};
+
+// Manual PDF regeneration endpoint
+exports.regeneratePDF = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID is required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if the order belongs to the user's company
+    const company = await Company.findOne({ admin: req.user.id });
+    if (!company || !order.companyId.equals(company._id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Start PDF regeneration
+    retryPDFGeneration(orderId)
+      .then((pdfResult) => {
+        console.log(
+          `Manual PDF regeneration successful for order ${orderId}:`,
+          pdfResult
+        );
+      })
+      .catch((err) => {
+        console.error(
+          `Manual PDF regeneration failed for order ${orderId}:`,
+          err.message
+        );
+      });
+
+    res.status(200).json({
+      message: 'PDF regeneration started',
+      orderId: orderId
+    });
+  } catch (error) {
+    console.error('Error starting PDF regeneration:', error);
+    res.status(500).json({
+      message: 'Error starting PDF regeneration',
       error: error.message
     });
   }

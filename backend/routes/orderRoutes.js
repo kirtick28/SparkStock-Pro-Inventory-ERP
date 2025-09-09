@@ -21,6 +21,14 @@ router
   );
 
 router
+  .route('/regenerate-pdf/:orderId')
+  .post(
+    authMiddleware,
+    roleMiddleware(['subadmin']),
+    orderController.regeneratePDF
+  );
+
+router
   .route('/stats')
   .get(
     authMiddleware,

@@ -9,6 +9,9 @@ cloudinary.config({
 });
 
 const uploadPDFToCloudinary = async (filePath, companyName, customerName) => {
+  const startTime = Date.now();
+  console.log('Starting Cloudinary upload...');
+
   try {
     const currentDateTime = moment().format('YYYY-MM-DD_HH-mm-ss');
     const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
@@ -18,20 +21,25 @@ const uploadPDFToCloudinary = async (filePath, companyName, customerName) => {
       resource_type: 'raw',
       folder: `${companyName}/invoices`,
       public_id: customFileName,
-      timeout: 30000, // 30 second timeout
-      chunk_size: 6000000, // 6MB chunks for faster upload
+      timeout: 20000, // Reduced timeout
+      chunk_size: 8000000, // Increased chunk size
       use_filename: false,
-      unique_filename: true
+      unique_filename: true,
+      eager_async: true, // Process in background
+      invalidate: true // Invalidate CDN cache
     });
 
-    console.log('File uploaded successfully:', result.secure_url);
+    console.log(
+      `File uploaded successfully in ${Date.now() - startTime}ms:`,
+      result.secure_url
+    );
     return result.secure_url;
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error uploading file:', error.message);
 
-    // Retry once on failure
+    // Single retry with simplified options
     try {
-      console.log('Retrying upload...');
+      console.log('Retrying upload with simplified options...');
       const currentDateTime = moment().format('YYYY-MM-DD_HH-mm-ss');
       const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
       const customFileName = `${sanitizedCustomerName}_${currentDateTime}_retry`;
@@ -40,19 +48,23 @@ const uploadPDFToCloudinary = async (filePath, companyName, customerName) => {
         resource_type: 'raw',
         folder: `${companyName}/invoices`,
         public_id: customFileName,
-        timeout: 20000,
+        timeout: 15000,
         use_filename: false,
         unique_filename: true
       });
 
       console.log(
-        'File uploaded successfully on retry:',
+        `File uploaded successfully on retry in ${Date.now() - startTime}ms:`,
         retryResult.secure_url
       );
       return retryResult.secure_url;
     } catch (retryError) {
-      console.error('Retry upload also failed:', retryError);
-      throw retryError;
+      console.error('Retry upload also failed:', retryError.message);
+
+      // Return a fallback message or throw with more context
+      throw new Error(
+        `Cloudinary upload failed after retry: ${retryError.message}`
+      );
     }
   }
 };

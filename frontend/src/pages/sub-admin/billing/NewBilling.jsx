@@ -50,7 +50,10 @@ const NewBilling = () => {
   const [newCustomerInfo, setNewCustomerInfo] = useState({
     name: '',
     phone: '',
-    address: ''
+    address: '',
+    city: '',
+    state: '',
+    pincode: ''
   });
 
   const searchInputRef = useRef(null);
@@ -442,7 +445,10 @@ const NewBilling = () => {
       setNewCustomerInfo({
         name: '',
         phone: '',
-        address: ''
+        address: '',
+        city: '',
+        state: '',
+        pincode: ''
       });
 
       toast.success('Order placed successfully!');
@@ -470,13 +476,13 @@ const NewBilling = () => {
 
   // Function to poll for PDF generation status
   const pollForPDF = async (orderId, attempts = 0) => {
-    const maxAttempts = 20; // Maximum 20 attempts (60 seconds)
+    const maxAttempts = 30; // Maximum 30 attempts (90 seconds)
     const interval = 3000; // 3 seconds between attempts
 
     if (attempts >= maxAttempts) {
       setPdfGenerating(false);
       toast.error(
-        'PDF generation taking longer than expected. Please check order history.'
+        'PDF generation taking longer than expected. You can check the order status later or try regenerating the PDF.'
       );
       return;
     }
@@ -488,14 +494,37 @@ const NewBilling = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.status === 'completed' && response.data.pdfUrl) {
-        setPdfUrl(response.data.pdfUrl);
+      const {
+        status,
+        pdfUrl,
+        message,
+        attempts: serverAttempts
+      } = response.data;
+
+      if (status === 'completed' && pdfUrl) {
+        setPdfUrl(pdfUrl);
         setShowPdfModal(true);
         setPdfGenerating(false);
         toast.success('Invoice generated successfully!');
+      } else if (status === 'error') {
+        setPdfGenerating(false);
+        toast.error(`PDF generation failed: ${message}`);
+
+        // Offer retry option if not too many attempts
+        if (serverAttempts < 3) {
+          toast.info('Automatic retry is in progress...', { autoClose: 2000 });
+          setTimeout(() => pollForPDF(orderId, attempts + 1), interval * 2); // Wait longer before next check
+        }
       } else {
-        // Continue polling
+        // Continue polling for processing status
         setTimeout(() => pollForPDF(orderId, attempts + 1), interval);
+
+        // Show progress message periodically
+        if (attempts % 5 === 0 && attempts > 0) {
+          toast.info(`Still generating PDF... (${attempts * 3}s)`, {
+            autoClose: 1500
+          });
+        }
       }
     } catch (error) {
       console.error('Error checking order status:', error);
@@ -653,7 +682,7 @@ const NewBilling = () => {
               )}
 
               {customerMode === 'new' && (
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
                     type="text"
                     placeholder="Customer Name *"
@@ -672,7 +701,7 @@ const NewBilling = () => {
                   />
                   <input
                     type="text"
-                    placeholder="Phone Number *"
+                    placeholder="Phone Number"
                     value={newCustomerInfo.phone}
                     onChange={(e) =>
                       setNewCustomerInfo({
@@ -702,6 +731,58 @@ const NewBilling = () => {
                         : 'bg-white border-gray-300 text-gray-900'
                     } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                   />
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={newCustomerInfo.city}
+                    onChange={(e) =>
+                      setNewCustomerInfo({
+                        ...newCustomerInfo,
+                        city: e.target.value
+                      })
+                    }
+                    className={`p-3 rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                  />
+                  <input
+                    type="text"
+                    placeholder="State"
+                    value={newCustomerInfo.state}
+                    onChange={(e) =>
+                      setNewCustomerInfo({
+                        ...newCustomerInfo,
+                        state: e.target.value
+                      })
+                    }
+                    className={`p-3 rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Pincode"
+                    value={newCustomerInfo.pincode}
+                    onChange={(e) =>
+                      setNewCustomerInfo({
+                        ...newCustomerInfo,
+                        pincode: e.target.value
+                      })
+                    }
+                    className={`p-3 rounded-lg border ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                  />
+                  <div className="md:col-span-2 text-xs text-gray-500 dark:text-gray-400">
+                    * Required field. Provide at least name and either phone or
+                    address to save customer details.
+                  </div>
                 </div>
               )}
             </div>

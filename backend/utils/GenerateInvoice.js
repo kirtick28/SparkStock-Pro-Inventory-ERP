@@ -1,94 +1,117 @@
 const puppeteer = require('puppeteer');
+const path = require('path');
+const fs = require('fs');
 
-// Cache browser instance for better performance
-let browserInstance = null;
+const generatePDF = async (pdfParams, retryCount = 0) => {
+  let page = null;
+  let browser = null;
+  const startTime = Date.now();
+  const maxRetries = 1;
 
-const getBrowser = async () => {
-  if (!browserInstance) {
-    browserInstance = await puppeteer.launch({
+  try {
+    console.log(`Starting PDF generation (attempt ${retryCount + 1})...`);
+    const company = pdfParams.companyDetails || {};
+    const customer = pdfParams.customerDetails || {};
+    const order = pdfParams.orderDetails || {};
+
+    // Launch a fresh browser instance for each PDF generation to avoid connection issues
+    console.log('Launching fresh browser instance...');
+    browser = await puppeteer.launch({
       headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-extensions'
-      ]
+        '--disable-gpu'
+      ],
+      timeout: 30000
     });
-  }
-  return browserInstance;
-};
 
-const generatePDF = async (pdfParams) => {
-  let page = null;
-
-  try {
-    const company = pdfParams.companyDetails || {};
-    const customer = pdfParams.customerDetails || {};
-    const order = pdfParams.orderDetails || {};
-
-    const browser = await getBrowser();
     page = await browser.newPage();
 
-    // Optimize page settings for faster rendering
-    await page.setViewport({ width: 1200, height: 800 });
-    await page.setDefaultNavigationTimeout(10000);
-    await page.setDefaultTimeout(10000);
-
-    // Disable images and CSS for faster loading
-    await page.setRequestInterception(true);
-    page.on('request', (request) => {
-      if (
-        request.resourceType() === 'image' ||
-        request.resourceType() === 'stylesheet'
-      ) {
-        request.abort();
-      } else {
-        request.continue();
-      }
-    });
+    // Set larger viewport and timeouts
+    await page.setViewport({ width: 794, height: 1123 });
+    await page.setDefaultNavigationTimeout(30000);
+    await page.setDefaultTimeout(30000);
 
     const htmlContent = generateHTML(company, customer, order);
+    console.log('HTML content generated, setting page content...');
 
     await page.setContent(htmlContent, {
-      waitUntil: 'domcontentloaded', // Changed from 'networkidle0' for faster generation
-      timeout: 10000
+      waitUntil: 'domcontentloaded',
+      timeout: 30000
     });
+
+    console.log('Waiting for page to be ready...');
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for content to fully render
+
+    console.log('Generating PDF...');
+
+    // Create invoices directory if it doesn't exist
+    const invoicesDir = path.join(process.cwd(), 'invoices');
+    if (!fs.existsSync(invoicesDir)) {
+      fs.mkdirSync(invoicesDir, { recursive: true });
+    }
+
+    // Generate unique filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const customerName = (customer.name || 'customer').replace(
+      /[^a-zA-Z0-9]/g,
+      '_'
+    );
+    const filename = `invoice_${customerName}_${timestamp}.pdf`;
+    const filepath = path.join(invoicesDir, filename);
 
     await page.pdf({
-      path: `invoice.pdf`,
+      path: filepath,
       format: 'A4',
       printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '15px', right: '15px' },
-      preferCSSPageSize: true
+      margin: { top: '10px', bottom: '10px', left: '10px', right: '10px' },
+      preferCSSPageSize: false
     });
 
-    console.log('PDF generated successfully!');
+    console.log(`PDF generated successfully in ${Date.now() - startTime}ms!`);
+    console.log(`PDF saved to: ${filepath}`);
+
+    return {
+      success: true,
+      filepath: filepath,
+      filename: filename
+    };
   } catch (error) {
-    console.error('Error generating PDF:', error);
+    console.error(
+      `PDF generation error (attempt ${retryCount + 1}):`,
+      error.message
+    );
+
+    if (retryCount < maxRetries) {
+      console.log(`Retrying PDF generation...`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      return await generatePDF(pdfParams, retryCount + 1);
+    }
+
     throw new Error(`Failed to generate PDF: ${error.message}`);
   } finally {
-    if (page) {
-      await page.close();
+    // Always close browser and page
+    if (page && !page.isClosed()) {
+      try {
+        await page.close();
+      } catch (closeError) {
+        console.log('Error closing page:', closeError.message);
+      }
+    }
+
+    if (browser && browser.isConnected()) {
+      try {
+        await browser.close();
+      } catch (closeError) {
+        console.log('Error closing browser:', closeError.message);
+      }
     }
   }
 };
 
-// Graceful shutdown function
-const closeBrowser = async () => {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
-  }
-};
-
-// Handle process termination
-process.on('SIGINT', closeBrowser);
-process.on('SIGTERM', closeBrowser);
-process.on('exit', closeBrowser);
+module.exports = { generatePDF };
 
 const generateHTML = (company, customer, order) => {
   let s_no = 1;
@@ -96,30 +119,39 @@ const generateHTML = (company, customer, order) => {
     .filter((item) => item.type === 'product')
     .map((item) => {
       return `
-      <tr class="border-b border-gray-200">
-        <td class="py-3 px-4 text-center">${s_no++}</td>
-        <td class="py-3 px-4 text-center">${item.quantity || 0}</td>
-        <td class="py-3 px-4">${item.name || 'Unknown Product'}</td>
-        <td class="py-3 px-4 text-right">₹${(item.unitprice || 0).toFixed(
-          2
-        )}</td>
-        <td class="py-3 px-4 text-right">₹${(item.total || 0).toFixed(2)}</td>
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 12px 16px; text-align: center;">${s_no++}</td>
+        <td style="padding: 12px 16px; text-align: center;">${
+          item.quantity || 0
+        }</td>
+        <td style="padding: 12px 16px;">${item.name || 'Unknown Product'}</td>
+        <td style="padding: 12px 16px; text-align: right;">₹${(
+          item.unitprice || 0
+        ).toFixed(2)}</td>
+        <td style="padding: 12px 16px; text-align: right;">₹${(
+          item.total || 0
+        ).toFixed(2)}</td>
       </tr>
       `;
     })
     .join('');
+
   const giftBoxItems = (order.cartitems || [])
     .filter((item) => item.type === 'giftbox')
     .map((item) => {
       return `
-      <tr class="border-b border-gray-200">
-        <td class="py-3 px-4 text-center">${s_no++}</td>
-        <td class="py-3 px-4 text-center">${item.quantity || 0}</td>
-        <td class="py-3 px-4">${item.name || 'Unknown Gift Box'}</td>
-        <td class="py-3 px-4 text-right">₹${(item.unitprice || 0).toFixed(
-          2
-        )}</td>
-        <td class="py-3 px-4 text-right">₹${(item.total || 0).toFixed(2)}</td>
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 12px 16px; text-align: center;">${s_no++}</td>
+        <td style="padding: 12px 16px; text-align: center;">${
+          item.quantity || 0
+        }</td>
+        <td style="padding: 12px 16px;">${item.name || 'Unknown Gift Box'}</td>
+        <td style="padding: 12px 16px; text-align: right;">₹${(
+          item.unitprice || 0
+        ).toFixed(2)}</td>
+        <td style="padding: 12px 16px; text-align: right;">₹${(
+          item.total || 0
+        ).toFixed(2)}</td>
       </tr>
       `;
     })
@@ -128,55 +160,59 @@ const generateHTML = (company, customer, order) => {
   const totalsHTML =
     order.gst && order.gst.status
       ? `
-          <div class="flex justify-between py-2">
-            <span class="font-medium">Total (Before GST):</span>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <span style="font-weight: 500;">Total (Before GST):</span>
             <span>₹${(order.total || 0).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between py-2">
-            <span class="font-medium">Discount (${order.discount || 0}%):</span>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <span style="font-weight: 500;">Discount (${
+              order.discount || 0
+            }%):</span>
             <span>₹${(
               ((order.discount || 0) * (order.total || 0)) /
               100
             ).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between py-2">
-            <span class="font-medium">GST (${
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <span style="font-weight: 500;">GST (${
               order.gst.percentage || 0
             }%):</span>
             <span>₹${(order.gst.amount || 0).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between py-2 border-t border-gray-300 pt-3">
-            <span class="font-bold text-lg">Grand Total:</span>
-            <span class="font-bold text-lg">₹${(order.grandtotal || 0).toFixed(
-              2
-            )}</span>
+          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid #d1d5db; margin-top: 12px;">
+            <span style="font-weight: 700; font-size: 18px;">Grand Total:</span>
+            <span style="font-weight: 700; font-size: 18px;">₹${(
+              order.grandtotal || 0
+            ).toFixed(2)}</span>
           </div>
         `
       : `
-          <div class="flex justify-between py-2">
-            <span class="font-medium">Total:</span>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <span style="font-weight: 500;">Total:</span>
             <span>₹${(order.total || 0).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between py-2">
-            <span class="font-medium">Discount (${order.discount || 0}%):</span>
+          <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+            <span style="font-weight: 500;">Discount (${
+              order.discount || 0
+            }%):</span>
             <span>₹${(
               ((order.discount || 0) * (order.total || 0)) /
               100
             ).toFixed(2)}</span>
           </div>
-          <div class="flex justify-between py-2 border-t border-gray-300 pt-3">
-            <span class="font-bold text-lg">Grand Total:</span>
-            <span class="font-bold text-lg">₹${(order.grandtotal || 0).toFixed(
-              2
-            )}</span>
+          <div style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid #d1d5db; margin-top: 12px;">
+            <span style="font-weight: 700; font-size: 18px;">Grand Total:</span>
+            <span style="font-weight: 700; font-size: 18px;">₹${(
+              order.grandtotal || 0
+            ).toFixed(2)}</span>
           </div>
         `;
 
   const EstimatedTotal =
     !order.gst || !order.gst.status
       ? `
-          <div class="mt-6 text-center bg-blue-50 py-3 rounded-lg">
-            <span class="font-bold text-xl text-blue-800">Estimated Total: ₹${(
+          <div style="margin-top: 24px; text-align: center; background-color: #dbeafe; padding: 12px; border-radius: 8px;">
+            <span style="font-weight: 700; font-size: 20px; color: #1e40af;">Estimated Total: ₹${(
               order.grandtotal || 0
             ).toFixed(2)}</span>
           </div>
@@ -185,14 +221,14 @@ const generateHTML = (company, customer, order) => {
 
   const gstNumberHTML =
     order.gst && order.gst.status && company.gstNumber
-      ? `<p class="text-sm">GSTIN: ${company.gstNumber}</p>`
+      ? `<p style="font-size: 14px; margin: 4px 0;">GSTIN: ${company.gstNumber}</p>`
       : '';
 
   const contactEmailHTML = company.contactEmail
-    ? `<p class="text-sm">Email: ${company.contactEmail}</p>`
+    ? `<p style="font-size: 14px; margin: 4px 0;">Email: ${company.contactEmail}</p>`
     : '';
   const contactPhoneHTML = company.contactPhone
-    ? `<p class="text-sm">Phone: ${company.contactPhone}</p>`
+    ? `<p style="font-size: 14px; margin: 4px 0;">Phone: ${company.contactPhone}</p>`
     : '';
 
   return `
@@ -202,50 +238,127 @@ const generateHTML = (company, customer, order) => {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Invoice</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-      <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
       <style>
-        body {
-          font-family: 'Inter', sans-serif;
-          color: #1F2937;
+        * {
           margin: 0;
           padding: 0;
-          background-color: #F9FAFB;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Arial', sans-serif;
+          color: #1f2937;
+          background-color: #f9fafb;
+          line-height: 1.6;
         }
         .invoice-container {
           max-width: 800px;
           margin: 20px auto;
-          background-color: #FFFFFF;
+          background-color: #ffffff;
           border-radius: 12px;
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
           overflow: hidden;
         }
         .header {
-          background-color: #1E40AF;
-          color: #FFFFFF;
+          background-color: #1e40af;
+          color: #ffffff;
           padding: 20px;
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
-        .footer {
-          background-color: #F3F4F6;
-          padding: 20px;
-          text-align: center;
-          border-top: 1px solid #E5E7EB;
+        .header-left h1 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 4px;
         }
-        .table th, .table td {
-          padding: 12px 16px;
-          text-align: left;
+        .header-left p {
+          font-size: 14px;
+          margin: 2px 0;
+        }
+        .header-right {
+          text-align: right;
+        }
+        .header-right h2 {
+          font-size: 20px;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        .customer-section {
+          padding: 24px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .customer-section h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 16px;
+        }
+        .customer-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .customer-info p {
+          margin: 4px 0;
+          font-size: 14px;
+        }
+        .customer-info .font-medium {
+          font-weight: 500;
+        }
+        .customer-info .text-gray-600 {
+          color: #6b7280;
+        }
+        .items-section {
+          padding: 24px;
+        }
+        .items-section h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin-bottom: 16px;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
         }
         .table th {
-          background-color: #F3F4F6;
+          background-color: #f3f4f6;
           font-weight: 600;
           text-transform: uppercase;
           font-size: 12px;
+          padding: 12px 16px;
+          border-bottom: 1px solid #e5e7eb;
         }
         .table td {
           font-size: 14px;
+          padding: 12px 16px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .totals-section {
+          padding: 24px;
+          background-color: #f9fafb;
+        }
+        .totals-container {
+          max-width: 300px;
+          margin-left: auto;
+        }
+        .footer {
+          background-color: #f3f4f6;
+          padding: 20px;
+          text-align: center;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+          margin: 4px 0;
+          font-size: 14px;
+        }
+        .footer .font-medium {
+          font-weight: 500;
+        }
+        .footer .text-gray-600 {
+          color: #6b7280;
+        }
+        .footer .text-gray-500 {
+          color: #9ca3af;
         }
       </style>
     </head>
@@ -253,16 +366,14 @@ const generateHTML = (company, customer, order) => {
       <div class="invoice-container">
         <!-- Header Section -->
         <div class="header">
-          <div>
-            <h1 class="text-2xl font-bold mb-1">${
-              company.companyname || ''
-            }</h1>
-            <p class="text-sm">${company.companytagline || ''}</p>
+          <div class="header-left">
+            <h1>${company.companyname || ''}</h1>
+            <p>${company.companytagline || ''}</p>
             ${gstNumberHTML}
           </div>
-          <div class="text-right">
-            <h2 class="text-xl font-semibold">Invoice</h2>
-            <p class="text-sm">${
+          <div class="header-right">
+            <h2>Invoice</h2>
+            <p>${
               order.createdat
                 ? new Date(order.createdat).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -275,17 +386,17 @@ const generateHTML = (company, customer, order) => {
         </div>
 
         <!-- Customer Information Section -->
-        <div class="p-6 border-b border-gray-200">
-          <h3 class="text-lg font-semibold mb-4">Billed To</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+        <div class="customer-section">
+          <h3>Billed To</h3>
+          <div class="customer-grid">
+            <div class="customer-info">
               <p class="font-medium">${customer.name || ''}</p>
-              <p class="text-sm text-gray-600">${customer.address || ''}</p>
-              <p class="text-sm text-gray-600">${customer.phone || ''}</p>
+              <p class="text-gray-600">${customer.address || ''}</p>
+              <p class="text-gray-600">${customer.phone || ''}</p>
             </div>
-            <div>
+            <div class="customer-info">
               <p class="font-medium">Customer ID</p>
-              <p class="text-sm text-gray-600">${customer._id || ''}</p>
+              <p class="text-gray-600">${customer._id || ''}</p>
             </div>
           </div>
         </div>
@@ -293,19 +404,19 @@ const generateHTML = (company, customer, order) => {
         ${EstimatedTotal}
 
         <!-- Invoice Items Section -->
-        <div class="p-6">
+        <div class="items-section">
           ${
             productItems
               ? `
-          <h3 class="text-lg font-semibold mb-4">Products</h3>
-          <table class="table w-full">
+          <h3>Products</h3>
+          <table class="table">
             <thead>
               <tr>
-                <th class="w-12">S.No</th>
-                <th class="w-12">Qty</th>
+                <th style="width: 60px;">S.No</th>
+                <th style="width: 60px;">Qty</th>
                 <th>Description</th>
-                <th class="w-24">Unit Price</th>
-                <th class="w-24">Line Total</th>
+                <th style="width: 100px;">Unit Price</th>
+                <th style="width: 100px;">Line Total</th>
               </tr>
             </thead>
             <tbody>
@@ -314,18 +425,19 @@ const generateHTML = (company, customer, order) => {
           </table>`
               : ''
           }
+          
           ${
             giftBoxItems
               ? `
-          <h3 class="text-lg font-semibold mt-6 mb-4">Gift Boxes</h3>
-          <table class="table w-full">
+          <h3 style="margin-top: 24px;">Gift Boxes</h3>
+          <table class="table">
             <thead>
               <tr>
-                <th class="w-12">S.No</th>
-                <th class="w-12">Qty</th>
+                <th style="width: 60px;">S.No</th>
+                <th style="width: 60px;">Qty</th>
                 <th>Description</th>
-                <th class="w-24">Unit Price</th>
-                <th class="w-24">Line Total</th>
+                <th style="width: 100px;">Unit Price</th>
+                <th style="width: 100px;">Line Total</th>
               </tr>
             </thead>
             <tbody>
@@ -337,8 +449,8 @@ const generateHTML = (company, customer, order) => {
         </div>
 
         <!-- Totals Section -->
-        <div class="p-6 bg-gray-50">
-          <div class="max-w-xs ml-auto">
+        <div class="totals-section">
+          <div class="totals-container">
             ${totalsHTML}
           </div>
         </div>
@@ -348,8 +460,10 @@ const generateHTML = (company, customer, order) => {
           <p class="font-medium">${company.personcontact || ''}</p>
           ${contactEmailHTML}
           ${contactPhoneHTML}
-          <p class="text-sm text-gray-600 mt-4">${company.shopaddress || ''}</p>
-          <p class="text-sm text-gray-500 mt-2">Thank you for your business!</p>
+          <p class="text-gray-600" style="margin-top: 16px;">${
+            company.shopaddress || ''
+          }</p>
+          <p class="text-gray-500" style="margin-top: 8px;">Thank you for your business!</p>
         </div>
       </div>
     </body>

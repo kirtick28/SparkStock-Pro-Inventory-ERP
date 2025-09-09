@@ -50,6 +50,8 @@ const orderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   grandtotal: { type: Number, required: true },
   invoicepdf: { type: String },
+  pdfError: { type: String }, // Store PDF generation error message
+  pdfGenerationAttempts: { type: Number, default: 0 }, // Track retry attempts
   createdat: { type: Date, default: Date.now }
 });
 
