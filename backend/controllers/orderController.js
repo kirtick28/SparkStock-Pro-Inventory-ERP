@@ -686,7 +686,7 @@ exports.regeneratePDF = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const company = await Company.findOne({ _id: req.user.companyId });
+    const company = await Company.findOne({ admin: req.user.id });
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }

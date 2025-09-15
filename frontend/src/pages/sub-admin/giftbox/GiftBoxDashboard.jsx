@@ -20,6 +20,7 @@ import {
   SortDesc,
   RefreshCw
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useTheme } from '../../../contexts/ThemeContext';
 import {
   fetchGiftBoxes,
@@ -56,7 +57,9 @@ const GiftBoxDashboard = () => {
   const [editingGiftBox, setEditingGiftBox] = useState(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const loading = giftBoxLoading || productsLoading;
+  // Separate loading states for better control
+  const loading = giftBoxLoading;
+  const isDataReady = !giftBoxLoading && !productsLoading;
 
   // Fetch data on component mount
   useEffect(() => {
@@ -192,6 +195,11 @@ const GiftBoxDashboard = () => {
   };
 
   const handleCreateNew = () => {
+    if (!isDataReady) {
+      // Show a toast message that data is still loading
+      toast.info('Please wait while products are loading...');
+      return;
+    }
     setEditingGiftBox(null);
     setShowBuilder(true);
   };
@@ -420,13 +428,21 @@ const GiftBoxDashboard = () => {
               </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: isDataReady ? 1.02 : 1 }}
+                whileTap={{ scale: isDataReady ? 0.98 : 1 }}
                 onClick={handleCreateNew}
-                className="px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                disabled={!isDataReady}
+                className={`px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium transition-all duration-200 shadow-lg ${
+                  isDataReady
+                    ? 'hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl cursor-pointer'
+                    : 'opacity-70 cursor-not-allowed'
+                }`}
+                title={
+                  !isDataReady ? 'Loading products...' : 'Create new gift box'
+                }
               >
                 <Plus size={16} className="inline mr-1.5" />
-                Create
+                {productsLoading ? 'Loading...' : 'Create'}
               </motion.button>
             </div>
           </div>
@@ -462,10 +478,16 @@ const GiftBoxDashboard = () => {
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: isDataReady ? 1.02 : 1 }}
+              whileTap={{ scale: isDataReady ? 0.98 : 1 }}
               onClick={handleCreateNew}
-              className="p-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium"
+              disabled={!isDataReady}
+              className={`p-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium ${
+                isDataReady ? 'cursor-pointer' : 'opacity-70 cursor-not-allowed'
+              }`}
+              title={
+                !isDataReady ? 'Loading products...' : 'Create new gift box'
+              }
             >
               <Plus size={16} />
             </motion.button>
@@ -567,7 +589,7 @@ const GiftBoxDashboard = () => {
 
       {/* Gift Boxes Grid */}
       <div className="p-0">
-        {loading ? (
+        {giftBoxLoading ? (
           <div className="flex justify-center items-center h-64">
             <Loader />
           </div>
@@ -792,7 +814,7 @@ const GiftBoxDashboard = () => {
               </AnimatePresence>
             </motion.div>
 
-            {filteredGiftBoxes.length === 0 && !loading && (
+            {filteredGiftBoxes.length === 0 && !giftBoxLoading && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -828,13 +850,23 @@ const GiftBoxDashboard = () => {
                   filterStatus === 'all' &&
                   priceRange === 'all' && (
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: isDataReady ? 1.05 : 1 }}
+                      whileTap={{ scale: isDataReady ? 0.95 : 1 }}
                       onClick={handleCreateNew}
-                      className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+                      disabled={!isDataReady}
+                      className={`mt-4 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-medium transition-all duration-200 ${
+                        isDataReady
+                          ? 'hover:from-blue-700 hover:to-indigo-700 cursor-pointer'
+                          : 'opacity-70 cursor-not-allowed'
+                      }`}
+                      title={
+                        !isDataReady
+                          ? 'Loading products...'
+                          : 'Create new gift box'
+                      }
                     >
                       <Plus size={16} className="inline mr-1.5" />
-                      Create First Gift Box
+                      {productsLoading ? 'Loading...' : 'Create First Gift Box'}
                     </motion.button>
                   )}
               </motion.div>

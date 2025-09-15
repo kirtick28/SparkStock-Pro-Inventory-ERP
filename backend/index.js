@@ -28,6 +28,7 @@ app.use('/api/order', require('./routes/orderRoutes'));
 app.use('/api/customer', require('./routes/customerRoutes'));
 app.use('/api/giftbox', require('./routes/giftboxRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes')); // Analytics routes
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

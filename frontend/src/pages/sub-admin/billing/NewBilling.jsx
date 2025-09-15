@@ -50,10 +50,7 @@ const NewBilling = () => {
   const [newCustomerInfo, setNewCustomerInfo] = useState({
     name: '',
     phone: '',
-    address: '',
-    city: '',
-    state: '',
-    pincode: ''
+    address: ''
   });
 
   const searchInputRef = useRef(null);
@@ -65,15 +62,17 @@ const NewBilling = () => {
     fetchGiftBoxes();
     fetchCustomers();
 
-    // Auto-focus search input on mount
+    // Auto-focus search input on mount (only if not in quantity mode)
     setTimeout(() => {
-      searchInputRef.current?.focus();
+      if (!isQuantityMode && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
     }, 100);
 
     // Keyboard shortcuts
     const handleGlobalKeyDown = (e) => {
-      // Ctrl/Cmd + F to focus search
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      // Ctrl/Cmd + F to focus search (only when not in quantity mode)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !isQuantityMode) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -92,6 +91,25 @@ const NewBilling = () => {
     };
   }, [isQuantityMode]);
 
+  // Ensure quantity input stays focused when in quantity mode
+  useEffect(() => {
+    if (isQuantityMode && quantityInputRef.current) {
+      const focusQuantityInput = () => {
+        if (quantityInputRef.current && isQuantityMode) {
+          quantityInputRef.current.focus();
+        }
+      };
+
+      // Focus immediately
+      focusQuantityInput();
+
+      // Add a small delay to override any other focus changes
+      const timeoutId = setTimeout(focusQuantityInput, 50);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isQuantityMode, selectedIndex]);
+
   useEffect(() => {
     const combined = [
       ...products.map((p) => ({
@@ -107,6 +125,12 @@ const NewBilling = () => {
     ];
     setAllItems(combined);
 
+    // Store currently selected item before filtering
+    const currentSelectedItem =
+      selectedIndex >= 0 && filteredItems[selectedIndex]
+        ? filteredItems[selectedIndex]
+        : null;
+
     if (searchTerm.trim()) {
       const filtered = combined.filter(
         (item) =>
@@ -114,8 +138,45 @@ const NewBilling = () => {
           item.displayName.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredItems(filtered);
+
+      // If we had a selected item, try to find it in the new filtered list
+      if (currentSelectedItem && isQuantityMode) {
+        const newIndex = filtered.findIndex(
+          (item) =>
+            item._id === currentSelectedItem._id &&
+            item.type === currentSelectedItem.type
+        );
+        if (newIndex >= 0) {
+          setSelectedIndex(newIndex);
+        } else {
+          // Selected item not in filtered results, exit quantity mode
+          setSelectedIndex(-1);
+          setIsQuantityMode(false);
+        }
+      } else if (selectedIndex >= filtered.length) {
+        setSelectedIndex(-1);
+        setIsQuantityMode(false);
+      }
     } else {
       setFilteredItems(combined);
+
+      // If we had a selected item, try to find it in the full list
+      if (currentSelectedItem && isQuantityMode) {
+        const newIndex = combined.findIndex(
+          (item) =>
+            item._id === currentSelectedItem._id &&
+            item.type === currentSelectedItem.type
+        );
+        if (newIndex >= 0) {
+          setSelectedIndex(newIndex);
+        } else {
+          setSelectedIndex(-1);
+          setIsQuantityMode(false);
+        }
+      } else if (selectedIndex >= combined.length) {
+        setSelectedIndex(-1);
+        setIsQuantityMode(false);
+      }
     }
   }, [products, giftBoxes, searchTerm]);
 
@@ -127,7 +188,7 @@ const NewBilling = () => {
       if (customer) {
         setCustomerMode('existing');
         setSelectedCustomer(customer);
-        toast.success(`Customer ${customer.name} automatically selected`);
+        // Removed customer auto-selection toast notification
       }
     }
   }, [searchParams, customers]);
@@ -232,17 +293,26 @@ const NewBilling = () => {
   };
 
   const addToCart = () => {
-    if (
-      selectedIndex < 0 ||
-      !filteredItems[selectedIndex] ||
-      !quantity ||
-      quantity <= 0
-    ) {
-      toast.error('Please select an item and enter valid quantity');
+    // Enhanced validation for selectedIndex and filteredItems
+    if (selectedIndex < 0 || selectedIndex >= filteredItems.length) {
+      toast.error('Please select a valid item');
       return;
     }
 
     const selectedItem = filteredItems[selectedIndex];
+
+    if (!selectedItem || !selectedItem.name || !selectedItem.price) {
+      toast.error('Selected item data is invalid. Please try selecting again.');
+      setSelectedIndex(-1);
+      setIsQuantityMode(false);
+      return;
+    }
+
+    if (!quantity || quantity <= 0) {
+      toast.error('Please enter valid quantity');
+      return;
+    }
+
     const qty = parseInt(quantity);
 
     if (isNaN(qty) || qty <= 0) {
@@ -295,13 +365,14 @@ const NewBilling = () => {
       ]);
     }
 
-    // Reset and focus back to search
+    // Reset quantity but keep in quantity mode for easy multiple additions
     setQuantity('');
-    setIsQuantityMode(false);
-    setSearchTerm('');
-    setSelectedIndex(-1);
-    searchInputRef.current?.focus();
-    toast.success(`${selectedItem.name} added to cart (Qty: ${qty})`);
+    // Keep isQuantityMode as true to stay focused on quantity input
+    // setIsQuantityMode(false); // Removed to keep quantity mode active
+    // setSearchTerm(''); // Keep search term to show selected product
+    // setSelectedIndex(-1); // Keep selected index
+    setTimeout(() => quantityInputRef.current?.focus(), 100);
+    // Removed excessive toast notification
   };
 
   const clearCart = () => {
@@ -312,7 +383,7 @@ const NewBilling = () => {
   const removeFromCart = (index) => {
     const newCart = cart.filter((_, i) => i !== index);
     setCart(newCart);
-    toast.success('Item removed from cart');
+    // Removed excessive toast notification
   };
 
   const updateCartQuantity = (index, newQuantity) => {
@@ -354,6 +425,12 @@ const NewBilling = () => {
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
       toast.error('Cart is empty');
+      return;
+    }
+
+    // Validate customer information when in new customer mode
+    if (customerMode === 'new' && !newCustomerInfo.name.trim()) {
+      toast.error('Please enter customer name');
       return;
     }
 
@@ -401,14 +478,52 @@ const NewBilling = () => {
       if (customerMode === 'existing' && selectedCustomer) {
         orderData.id = selectedCustomer._id;
       } else if (customerMode === 'new' && newCustomerInfo.name.trim()) {
-        orderData.customerInfo = {
-          name: newCustomerInfo.name.trim(),
-          phone: newCustomerInfo.phone.trim() || '',
-          address: newCustomerInfo.address.trim() || '',
-          city: newCustomerInfo.city?.trim() || '',
-          state: newCustomerInfo.state?.trim() || '',
-          pincode: newCustomerInfo.pincode?.trim() || ''
-        };
+        // Create customer first, then use the customer ID for the order
+        try {
+          const customerData = {
+            name: newCustomerInfo.name.trim(),
+            phone: newCustomerInfo.phone.trim() || '',
+            address: newCustomerInfo.address.trim() || ''
+          };
+
+          console.log('Creating new customer:', customerData);
+
+          const customerResponse = await axios.post(
+            `${import.meta.env.VITE_BASEURL}/customer/add`,
+            customerData,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              }
+            }
+          );
+
+          if (
+            customerResponse.status === 201 &&
+            customerResponse.data.customer
+          ) {
+            // Use the newly created customer ID
+            orderData.id = customerResponse.data.customer._id;
+            console.log(
+              'Customer created successfully:',
+              customerResponse.data.customer
+            );
+
+            // Update customers list and selected customer
+            setCustomers((prev) => [...prev, customerResponse.data.customer]);
+            setSelectedCustomer(customerResponse.data.customer);
+            setCustomerMode('existing');
+          } else {
+            throw new Error('Failed to create customer');
+          }
+        } catch (customerError) {
+          console.error('Failed to create customer:', customerError);
+          toast.error(
+            'Failed to create customer. Order will be placed without customer details.'
+          );
+          // Continue with order without customer if creation fails
+        }
       }
 
       console.log('Placing order with data:', orderData);
@@ -445,10 +560,7 @@ const NewBilling = () => {
       setNewCustomerInfo({
         name: '',
         phone: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: ''
+        address: ''
       });
 
       toast.success('Order placed successfully!');
@@ -546,9 +658,9 @@ const NewBilling = () => {
       }`}
     >
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
           {/* Left Panel - Search and Items */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 flex flex-col h-full">
             {/* Customer Selection */}
             <div
               className={`p-4 rounded-lg border ${
@@ -682,7 +794,7 @@ const NewBilling = () => {
               )}
 
               {customerMode === 'new' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <input
                     type="text"
                     placeholder="Customer Name *"
@@ -698,6 +810,7 @@ const NewBilling = () => {
                         ? 'bg-gray-700 border-gray-600 text-white'
                         : 'bg-white border-gray-300 text-gray-900'
                     } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                    required
                   />
                   <input
                     type="text"
@@ -715,8 +828,7 @@ const NewBilling = () => {
                         : 'bg-white border-gray-300 text-gray-900'
                     } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                   />
-                  <input
-                    type="text"
+                  <textarea
                     placeholder="Address"
                     value={newCustomerInfo.address}
                     onChange={(e) =>
@@ -725,63 +837,16 @@ const NewBilling = () => {
                         address: e.target.value
                       })
                     }
+                    rows={2}
                     className={`p-3 rounded-lg border ${
                       theme === 'dark'
                         ? 'bg-gray-700 border-gray-600 text-white'
                         : 'bg-white border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none`}
                   />
-                  <input
-                    type="text"
-                    placeholder="City"
-                    value={newCustomerInfo.city}
-                    onChange={(e) =>
-                      setNewCustomerInfo({
-                        ...newCustomerInfo,
-                        city: e.target.value
-                      })
-                    }
-                    className={`p-3 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  />
-                  <input
-                    type="text"
-                    placeholder="State"
-                    value={newCustomerInfo.state}
-                    onChange={(e) =>
-                      setNewCustomerInfo({
-                        ...newCustomerInfo,
-                        state: e.target.value
-                      })
-                    }
-                    className={`p-3 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Pincode"
-                    value={newCustomerInfo.pincode}
-                    onChange={(e) =>
-                      setNewCustomerInfo({
-                        ...newCustomerInfo,
-                        pincode: e.target.value
-                      })
-                    }
-                    className={`p-3 rounded-lg border ${
-                      theme === 'dark'
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-gray-300 text-gray-900'
-                    } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
-                  />
-                  <div className="md:col-span-2 text-xs text-gray-500 dark:text-gray-400">
-                    * Required field. Provide at least name and either phone or
-                    address to save customer details.
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    * Customer name is required. Phone and address are optional
+                    but recommended.
                   </div>
                 </div>
               )}
@@ -980,10 +1045,10 @@ const NewBilling = () => {
           </div>
 
           {/* Right Panel - Cart and Totals */}
-          <div className="space-y-6">
+          <div className="space-y-6 flex flex-col h-full">
             {/* Cart */}
             <div
-              className={`p-4 rounded-lg border ${
+              className={`p-4 rounded-lg border flex-1 ${
                 theme === 'dark'
                   ? 'bg-gray-800 border-gray-700'
                   : 'bg-white border-gray-200'
